@@ -152,3 +152,60 @@ export interface HealthResponse {
     inference_worker: 'online' | 'offline';
   };
 }
+
+// -----------------------------------------------------------------------------
+// SURGE operational API contracts
+// -----------------------------------------------------------------------------
+
+export type SurgeRole = 'ORG_ADMIN' | 'GRID_OPERATOR' | 'PLANT_OPERATOR' | 'ENERGY_ANALYST';
+export type PlantEnergyType = 'SOLAR' | 'WIND';
+export type PlantAccessLevel = 'VIEW' | 'OPERATE' | 'MANAGE';
+
+export interface Plant {
+  id: string;
+  organization_id: string;
+  name: string;
+  energy_type: PlantEnergyType;
+  location_name: string | null;
+  latitude: number;
+  longitude: number;
+  timezone: string | null;
+  capacity_mw: number;
+  status: 'DRAFT' | 'ACTIVE' | 'MAINTENANCE' | 'OFFLINE';
+  configuration: Record<string, unknown>;
+}
+
+export interface PlantInput {
+  organization_id: string;
+  name: string;
+  energy_type: PlantEnergyType;
+  latitude: number;
+  longitude: number;
+  capacity_mw: number;
+  location_name?: string;
+  timezone?: string;
+  configuration?: Record<string, unknown>;
+}
+
+export interface LocationSearchResult {
+  name: string;
+  country: string | null;
+  admin1: string | null;
+  latitude: number;
+  longitude: number;
+  timezone: string | null;
+}
+
+export interface WeatherData {
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  hourly: Record<string, Array<string | number | null>>;
+}
+
+export interface DataTrustResult {
+  plant_id: string | null;
+  overall_status: 'HEALTHY' | 'WARNING' | 'QUARANTINED';
+  validation_runs: Array<Record<string, unknown>>;
+  anomalies: Array<Record<string, unknown>>;
+}
