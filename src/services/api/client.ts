@@ -136,6 +136,17 @@ export class ApiClient {
       timeoutMs
     );
   }
+
+  public async patch<T, B = unknown>(endpoint: string, body: B, timeoutMs?: number): Promise<T> {
+    return this.request<T>(
+      endpoint,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+      timeoutMs
+    );
+  }
 }
 
 export const apiClient = new ApiClient();
