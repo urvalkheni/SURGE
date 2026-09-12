@@ -17,13 +17,17 @@ import {
   Database, 
   Server, 
   ChevronRight,
-  RotateCcw,
   Sparkles,
   Sliders,
   Globe,
   Radio,
   FileText,
-  Leaf
+  Leaf,
+  Building2,
+  Clock,
+  Play,
+  Menu,
+  X
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -41,6 +45,9 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, loginAsDemo } = useAuth();
 
+  // Mobile navigation menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Interactive Simulator State
   const [activeScenario, setActiveScenario] = useState('cloud_shock'); // 'normal' | 'cloud_shock' | 'heatwave' | 'wind_lull'
 
@@ -51,7 +58,6 @@ export default function LandingPage() {
     ];
 
     return hours.map((time, idx) => {
-      // Base generation profile
       const solarBase = [10, 45, 110, 155, 140, 75, 15, 0, 0, 0][idx];
       const windBase = [30, 25, 20, 20, 25, 35, 55, 65, 50, 40][idx];
       const demandBase = [90, 120, 140, 150, 145, 140, 160, 175, 150, 110][idx];
@@ -62,19 +68,16 @@ export default function LandingPage() {
       let bess = 0;
 
       if (activeScenario === 'cloud_shock') {
-        // Solar drops 40% between 10:00 and 16:00
         if (idx >= 2 && idx <= 5) {
           solar = Math.round(solarBase * 0.6);
           bess = 35; // BESS discharges to compensate
         }
       } else if (activeScenario === 'heatwave') {
-        // Demand spikes 30 MW during peak hours
         if (idx >= 6 && idx <= 8) {
           demand = demandBase + 30;
           bess = 45; // Battery discharges to peak-shave
         }
       } else if (activeScenario === 'wind_lull') {
-        // Wind drops 50% in evening
         if (idx >= 6) {
           wind = Math.round(windBase * 0.5);
           bess = 30;
@@ -96,7 +99,7 @@ export default function LandingPage() {
     });
   }, [activeScenario]);
 
-  const handleLaunchDemo = () => {
+  const handleDemoAccess = () => {
     loginAsDemo('Chief Grid Dispatcher');
     navigate('/dashboard');
   };
@@ -105,14 +108,14 @@ export default function LandingPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white font-sans antialiased">
       
       {/* ------------------------------------------------------------------ */}
-      {/* 1. TOP NAVIGATION (Clean White Sticky Navbar)                       */}
+      {/* 1. TOP NAVIGATION                                                  */}
       {/* ------------------------------------------------------------------ */}
       <nav className="sticky top-0 z-50 backdrop-blur-xl bg-white/95 border-b border-slate-200/80 shadow-2xs transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
           {/* Brand Logo */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform overflow-hidden">
               <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
             </div>
             <div>
@@ -129,137 +132,430 @@ export default function LandingPage() {
           </Link>
 
           {/* Center Navigation Links */}
-          <div className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-600">
+          <div className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
+            <a href="#showcase" className="hover:text-blue-600 transition-colors">Clean Infrastructure</a>
             <a href="#simulator" className="hover:text-blue-600 transition-colors">Live Simulator</a>
             <a href="#capabilities" className="hover:text-blue-600 transition-colors">Capabilities</a>
-            <a href="#architecture" className="hover:text-blue-600 transition-colors">Intelligence Flow</a>
-            <a href="#benchmarks" className="hover:text-blue-600 transition-colors">CERC Benchmarks</a>
-            <a href="#database" className="hover:text-blue-600 transition-colors">Supabase DB</a>
+            <a href="#benchmarks" className="hover:text-blue-600 transition-colors">CERC DSM Benchmarks</a>
           </div>
 
-          {/* Right Action CTA Buttons */}
-          <div className="flex items-center gap-3">
+          {/* Right Action CTA Buttons & Mobile Hamburger Toggle */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {isAuthenticated ? (
-              <Link
-                to="/dashboard"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
-              >
-                <span>Control Room</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              <div className="flex items-center gap-2">
+                <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  <span className="truncate max-w-[130px]">{user?.name || "Krish Patel"}</span>
+                </span>
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
+                >
+                  <span className="hidden xs:inline">Dashboard</span>
+                  <span className="xs:hidden">App</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             ) : (
-              <>
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
+                <button
+                  onClick={handleDemoAccess}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold transition-all cursor-pointer"
+                  title="Sign in immediately as demo operator"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                  <span>1-Click Demo</span>
+                </button>
                 <Link
                   to="/login"
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
+                  className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/signup"
-                  className="hidden sm:flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
+                  className="flex items-center gap-1 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs hover:shadow-md transition-all cursor-pointer"
                 >
-                  <span>Operator Access</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <span>Register</span>
+                  <ChevronRight className="w-3.5 h-3.5 hidden sm:inline" />
                 </Link>
-              </>
+              </div>
             )}
+
+            {/* Mobile Hamburger Toggle */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              aria-label="Toggle Navigation Menu"
+              title="Navigation Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Drawer */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-white/95 backdrop-blur-xl border-b border-slate-200 px-4 pt-3 pb-5 space-y-3 shadow-xl animate-fade-in">
+            <div className="flex flex-col space-y-1 text-xs font-semibold text-slate-700">
+              <a 
+                href="#showcase" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                Clean Infrastructure
+              </a>
+              <a 
+                href="#simulator" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                Live Simulator
+              </a>
+              <a 
+                href="#capabilities" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                Industrial Capabilities
+              </a>
+              <a 
+                href="#benchmarks" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                CERC DSM Benchmarks
+              </a>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
+              {!isAuthenticated && (
+                <button
+                  onClick={() => { setMobileMenuOpen(false); handleDemoAccess(); }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                  <span>1-Click Demo Operator (Krish Patel)</span>
+                </button>
+              )}
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+              >
+                <span>Enter Operational Control Room</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 2. HERO SECTION                                                    */}
+      {/* 2. ADVANCED HERO SECTION (Left: Text & CTAs | Right: Photo & Overlays) */}
       {/* ------------------------------------------------------------------ */}
-      <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-28 border-b border-slate-200/60">
-        
+      <section className="relative overflow-hidden pt-10 pb-16 lg:pt-16 lg:pb-24 border-b border-slate-200/60">
         {/* Soft Ambient Light Gradient Blobs */}
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-r from-emerald-100/50 via-teal-50/60 to-blue-100/50 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute top-10 left-1/3 -translate-x-1/2 w-[850px] h-[400px] bg-gradient-to-r from-emerald-100/60 via-teal-50/70 to-blue-100/60 blur-[120px] rounded-full pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-12">
           
-          {/* Real-Time Operational Status Pill */}
-          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-2xs text-xs text-slate-700">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-            </span>
-            <span className="font-mono text-emerald-700 font-bold">18.4 GW Fleet Online</span>
-            <span className="text-slate-300">•</span>
-            <span className="font-medium text-slate-600">National Load Despatch Interconnection Active</span>
-          </div>
+          {/* Main 2-Column Split Hero (Left: Predict Dispatch Balance, Right: Photo) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* LEFT COLUMN: Headline, Subtitle, CTAs, Micro-Benchmarks */}
+            <div className="lg:col-span-6 xl:col-span-6 space-y-5 sm:space-y-6 text-left">
+              {/* Status Pill */}
+              <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200 shadow-2xs text-[11px] sm:text-xs text-slate-700 animate-fade-in flex-wrap">
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <span className="font-mono text-emerald-700 font-bold">18.4 GW Fleet Online</span>
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="font-medium text-slate-600">SLDC Interconnection Active</span>
+              </div>
 
-          {/* Main Headline */}
-          <div className="space-y-4 max-w-4xl mx-auto">
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-tight">
-              Predict. Dispatch.{' '}
-              <span className="text-emerald-600">
-                Balance.
-              </span>
-            </h1>
-            <p className="text-sm sm:text-base lg:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-              Industrial-grade 72-hour solar and wind quantile forecasting, sub-hourly ramp detection, and automated BESS dispatch for SLDCs and renewable energy clusters across India.
-            </p>
-          </div>
+              {/* Headline */}
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.12]">
+                Predict. Dispatch.{' '}
+                <span className="block mt-1 bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 bg-clip-text text-transparent">
+                  Balance.
+                </span>
+              </h1>
 
-          {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
-            <Link
-              to="/dashboard"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xs hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer"
-            >
-              <span>Enter Operational Control Room</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+              <p className="text-xs sm:text-sm md:text-base text-slate-600 max-w-xl leading-relaxed">
+                Industrial-grade 72-hour solar and wind quantile forecasting, sub-hourly ramp detection, and automated BESS dispatch for SLDCs and renewable energy clusters across India.
+              </p>
 
-            <button
-              onClick={handleLaunchDemo}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-800 font-semibold text-sm shadow-2xs hover:shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>Instant Demo (Krish Patel - Gujarat SLDC)</span>
-            </button>
+              {/* Action CTAs */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 pt-1">
+                <Link
+                  to="/dashboard"
+                  className="flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-xs hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer text-center"
+                >
+                  <span>Operational Control Room</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
 
-            <Link
-              to="/signup"
-              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-6 py-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 font-semibold text-sm transition-all"
-            >
-              <span>Register Operator</span>
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
+                <button
+                  type="button"
+                  onClick={handleDemoAccess}
+                  className="flex items-center justify-center gap-2 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200/90 text-slate-800 font-semibold text-xs sm:text-sm shadow-2xs hover:shadow-xs transition-all hover:-translate-y-0.5 cursor-pointer text-center"
+                >
+                  <Zap className="w-4 h-4 text-amber-500 fill-amber-400" />
+                  <span>1-Click Demo</span>
+                </button>
 
-          {/* Metric Telemetry Row (Matching Dashboard Cards) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto pt-6" id="benchmarks">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Day-Ahead Accuracy</span>
-              <div className="text-2xl lg:text-3xl font-black text-slate-900 font-mono">97.4%</div>
-              <p className="text-[11px] text-emerald-600 font-semibold">Dual-tier XGBoost & Quantiles</p>
+                <Link
+                  to="/signup"
+                  className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-3 sm:py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs sm:text-sm transition-all cursor-pointer text-center"
+                >
+                  <span>Register Facility</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {/* Key Trust & Compliance Badges Below CTAs */}
+              <div className="pt-3 border-t border-slate-200/70 grid grid-cols-3 gap-2 sm:gap-3 text-left">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-900 truncate">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>CERC DSM</span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500">&lt;10% Zero Penalty</p>
+                </div>
+
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-900 truncate">
+                    <Cpu className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>Quantiles</span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500">P10 • P50 • P90</p>
+                </div>
+
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1 text-[11px] sm:text-xs font-bold text-slate-900 truncate">
+                    <Activity className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    <span>Real-time</span>
+                  </div>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500">&lt;850ms Latency</p>
+                </div>
+              </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">CERC DSM Band</span>
-              <div className="text-2xl lg:text-3xl font-black text-slate-900 font-mono">&lt; 10%</div>
-              <p className="text-[11px] text-blue-600 font-semibold">Zero penalty threshold</p>
+            {/* RIGHT COLUMN: Real High-Resolution Photo Showcase with Glassmorphic Floating Telemetry */}
+            <div className="lg:col-span-6 xl:col-span-6 relative">
+              {/* Ambient Glow */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-teal-500/20 rounded-3xl blur-xl opacity-70" />
+
+              <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-900 group">
+                {/* High-Resolution Clean Energy Infrastructure Photo */}
+                <div className="w-full h-[320px] sm:h-[400px] lg:h-[460px] relative overflow-hidden">
+                  <img 
+                    src="/landing-hero-hybrid-park.jpg" 
+                    alt="Khavda Renewable Energy Hybrid Park, Gujarat" 
+                    className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-700"
+                  />
+                  {/* Subtle vignette gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
+                </div>
+
+                {/* FLOATING GLASS TELEMETRY CARDS (Interactive Visual Overlays) */}
+                
+                {/* Card 1: Top-Left Inflow Telemetry */}
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/90 backdrop-blur-md border border-white/70 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-xl max-w-[170px] sm:max-w-xs animate-fade-in">
+                  <div className="flex items-center gap-1 mb-0.5 sm:mb-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                    <span className="text-[9px] sm:text-[10px] font-mono uppercase font-bold text-slate-500 truncate">
+                      Charanka 220kV Pooling
+                    </span>
+                  </div>
+                  <div className="text-sm sm:text-lg font-black text-slate-900 font-mono">
+                    184.2 MW Live
+                  </div>
+                  <div className="text-[9px] sm:text-[10px] text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+                    <span>98.4% of Target</span>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600 inline shrink-0" />
+                  </div>
+                </div>
+
+                {/* Card 2: Top-Right CERC DSM Shield */}
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white/90 backdrop-blur-md border border-white/70 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-xl max-w-[180px] hidden sm:block animate-fade-in">
+                  <div className="flex items-center gap-1 mb-1 text-slate-500 text-[10px] font-mono uppercase font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>CERC DSM</span>
+                  </div>
+                  <div className="text-sm sm:text-lg font-black text-blue-700 font-mono">
+                    1.24% nRMSE
+                  </div>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 mt-0.5">
+                    Zero Penalty Zone
+                  </span>
+                </div>
+
+                {/* Card 3: Bottom BESS Autonomous Dispatch */}
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-2xl text-white animate-fade-in">
+                  <div className="flex items-center justify-between gap-2 sm:gap-4 mb-0.5 sm:mb-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+                      <BatteryCharging className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+                      <span className="text-[11px] sm:text-xs font-bold text-slate-200 font-sans truncate">Khavda 50MWh BESS Hub</span>
+                    </div>
+                    <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                      94% SoC
+                    </span>
+                  </div>
+                  <div className="text-[11px] sm:text-xs font-semibold text-emerald-300">
+                    Charging +20 MW • Midday Solar Surplus Absorption
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5 hidden xs:block sm:block">
+                    Secures ₹84,000 in avoided curtailment penalties for Gujarat SLDC.
+                  </div>
+                </div>
+
+              </div>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inference Latency</span>
-              <div className="text-2xl lg:text-3xl font-black text-slate-900 font-mono">&lt; 850ms</div>
-              <p className="text-[11px] text-amber-600 font-semibold">Sub-hourly dispatch sync</p>
+          </div>
+
+          {/* Metric Telemetry Row (Matching Control Room Benchmarks) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 max-w-7xl mx-auto pt-2" id="benchmarks">
+            <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left hover:border-blue-300 transition-colors">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">Day-Ahead Accuracy</span>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 font-mono">97.4%</div>
+              <p className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold truncate">Dual-tier XGBoost & Quantiles</p>
             </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Penalties Prevented</span>
-              <div className="text-2xl lg:text-3xl font-black text-slate-900 font-mono">₹4.2 Cr</div>
-              <p className="text-[11px] text-emerald-600 font-semibold">Across Gujarat & Rajasthan REMCs</p>
+            <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left hover:border-blue-300 transition-colors">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">CERC DSM Band</span>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 font-mono">&lt; 10%</div>
+              <p className="text-[10px] sm:text-[11px] text-blue-600 font-semibold truncate">Zero penalty compliance</p>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left hover:border-blue-300 transition-colors">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inference Latency</span>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 font-mono">&lt; 850ms</div>
+              <p className="text-[10px] sm:text-[11px] text-amber-600 font-semibold truncate">Sub-hourly dispatch sync</p>
+            </div>
+
+            <div className="p-3.5 sm:p-5 rounded-xl sm:rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-1 text-left hover:border-blue-300 transition-colors">
+              <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">Penalties Prevented</span>
+              <div className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 font-mono">₹4.2 Cr</div>
+              <p className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold truncate">Across Gujarat & REMCs</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 3. INTERACTIVE SIMULATOR (Live Grid Stress-Test)                   */}
+      {/* 3. CLEAN INFRASTRUCTURE PHOTO SHOWCASE                             */}
+      {/* ------------------------------------------------------------------ */}
+      <section id="showcase" className="py-20 bg-white border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          <div className="text-center space-y-3 max-w-3xl mx-auto">
+            <span className="text-xs font-sans font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              National Fleet Operations
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
+              Monitored Renewable Energy Infrastructure Across India
+            </h2>
+            <p className="text-sm text-slate-500">
+              Direct telemetry interconnections spanning utility-scale solar parks, multi-megawatt wind farms, BESS storage hubs, and State Load Despatch Centers.
+            </p>
+          </div>
+
+          {/* 3 Photo Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {/* Photo 1: Khavda Solar & Wind Park */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs hover:shadow-lg transition-all space-y-4 group">
+              <div className="w-full h-52 overflow-hidden relative">
+                <img 
+                  src="/landing-hero-hybrid-park.jpg" 
+                  alt="Khavda Renewable Hybrid Hub" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-xs font-mono">
+                  30,000 MW Fleet
+                </span>
+              </div>
+              <div className="p-6 pt-0 space-y-2">
+                <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Kutch, Gujarat</div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Khavda Renewable Energy Hybrid Park
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  World's largest clean energy park. Features automated 72h quantile forecasting to manage rapid solar decay and evening coastal wind ramps.
+                </p>
+                <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-blue-600">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Dual-stage XGBoost Models</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Photo 2: BESS Battery Storage Facility */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs hover:shadow-lg transition-all space-y-4 group">
+              <div className="w-full h-52 overflow-hidden relative">
+                <img 
+                  src="/landing-bess-storage.jpg" 
+                  alt="Charanka Utility-Scale BESS Facility" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-xs font-mono">
+                  50 MWh Storage
+                </span>
+              </div>
+              <div className="p-6 pt-0 space-y-2">
+                <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Patan, Gujarat</div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Charanka BESS Absorption & Peaker Hub
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Utility-scale lithium storage buffering midday generation surplus and discharging during peak evening demand (18:00 – 21:00 IST).
+                </p>
+                <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-emerald-600">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Autonomous Peak Shaving</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Photo 3: State Load Despatch Center Control Room */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs hover:shadow-lg transition-all space-y-4 group">
+              <div className="w-full h-52 overflow-hidden relative">
+                <img 
+                  src="/landing-sldc-control-room.jpg" 
+                  alt="State Electrical Load Despatch Center" 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-xs font-mono">
+                  50.00 Hz Grid Sync
+                </span>
+              </div>
+              <div className="p-6 pt-0 space-y-2">
+                <div className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Gotri, Vadodara</div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Gujarat State Load Despatch Center (SLDC)
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  24/7 Renewable Energy Management Center (REMC). Direct SCADA and API integration ensuring complete CERC DSM regulatory compliance.
+                </p>
+                <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-purple-600">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>National Grid Code Compliant</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* 4. INTERACTIVE SIMULATOR (Live Grid Stress-Test)                   */}
       {/* ------------------------------------------------------------------ */}
       <section id="simulator" className="py-16 bg-slate-100/70 border-b border-slate-200/80 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
@@ -279,10 +575,10 @@ export default function LandingPage() {
             </div>
 
             {/* Scenario Switcher Buttons */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               <button
                 onClick={() => setActiveScenario('normal')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold border transition-all cursor-pointer ${
                   activeScenario === 'normal'
                     ? 'bg-white border-slate-300 text-slate-900 shadow-xs font-bold'
                     : 'bg-slate-200/60 border-slate-200 text-slate-600 hover:bg-white'
@@ -292,70 +588,70 @@ export default function LandingPage() {
               </button>
               <button
                 onClick={() => setActiveScenario('cloud_shock')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === 'cloud_shock'
                     ? 'bg-amber-50 border-amber-300 text-amber-800 shadow-xs font-bold'
                     : 'bg-slate-200/60 border-slate-200 text-slate-600 hover:bg-white'
                 }`}
               >
-                <Sun className="w-3.5 h-3.5 text-amber-500" />
+                <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 <span>Cloud Drift (-40% Solar)</span>
               </button>
               <button
                 onClick={() => setActiveScenario('heatwave')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === 'heatwave'
                     ? 'bg-rose-50 border-rose-300 text-rose-800 shadow-xs font-bold'
                     : 'bg-slate-200/60 border-slate-200 text-slate-600 hover:bg-white'
                 }`}
               >
-                <Zap className="w-3.5 h-3.5 text-rose-500" />
+                <Zap className="w-3.5 h-3.5 text-rose-500 shrink-0" />
                 <span>Heatwave Surge (+30 MW)</span>
               </button>
               <button
                 onClick={() => setActiveScenario('wind_lull')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === 'wind_lull'
                     ? 'bg-blue-50 border-blue-300 text-blue-800 shadow-xs font-bold'
                     : 'bg-slate-200/60 border-slate-200 text-slate-600 hover:bg-white'
                 }`}
               >
-                <Wind className="w-3.5 h-3.5 text-blue-500" />
+                <Wind className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                 <span>Evening Wind Lull (-50%)</span>
               </button>
             </div>
           </div>
 
           {/* Interactive Chart Container */}
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-xs space-y-6">
+          <div className="bg-white border border-slate-200/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-xs space-y-4 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-800 font-sans">Gujarat SLDC • Kutch-Saurashtra Renewable Corridor</span>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="text-xs font-bold text-slate-800 font-sans truncate">Gujarat SLDC • Kutch-Saurashtra Corridor</span>
               </div>
-              <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs font-medium text-slate-500">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded bg-amber-500" />
+                  <span className="w-2.5 h-2.5 rounded bg-amber-500 shrink-0" />
                   <span>Solar (MW)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded bg-blue-500" />
+                  <span className="w-2.5 h-2.5 rounded bg-blue-500 shrink-0" />
                   <span>Wind (MW)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded bg-emerald-500" />
+                  <span className="w-2.5 h-2.5 rounded bg-emerald-500 shrink-0" />
                   <span className="font-semibold text-emerald-700">BESS Mitigation</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded bg-rose-500" />
+                  <span className="w-2.5 h-2.5 rounded bg-rose-500 shrink-0" />
                   <span>Grid Demand (MW)</span>
                 </div>
               </div>
             </div>
 
-            <div className="h-80 w-full">
+            <div className="h-64 sm:h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={simulationData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={simulationData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                   <defs>
                     <linearGradient id="solarGradLight" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25}/>
@@ -410,7 +706,7 @@ export default function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 4. CORE CAPABILITIES (Grid Features)                                */}
+      {/* 5. CORE CAPABILITIES (Grid Features)                                */}
       {/* ------------------------------------------------------------------ */}
       <section id="capabilities" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="text-center space-y-3 max-w-3xl mx-auto">
@@ -421,7 +717,7 @@ export default function LandingPage() {
             Engineered for High-Penetration Renewable Grids
           </h2>
           <p className="text-sm text-slate-500">
-            From single 100 MW solar arrays to 18,000 MW state transmission networks, SURGE bridges meteorological prediction and real-time physical dispatch.
+            From single 100 MW solar arrays to 30,000 MW hybrid parks, SURGE bridges meteorological prediction and real-time physical dispatch.
           </p>
         </div>
 
@@ -467,305 +763,89 @@ export default function LandingPage() {
             </p>
             <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-amber-600">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Instant Dispatch Approval Modal</span>
-            </div>
-          </div>
-
-          {/* Card 4 */}
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/80 hover:border-teal-400/80 shadow-xs hover:shadow-md transition-all space-y-4 group">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 group-hover:scale-110 transition-transform">
-              <Sun className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">Hyper-Local Weather Layers</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Open-Meteo satellite ingestion computing Direct Normal Irradiance (DNI), Diffuse Horizontal (DHI), and wind shear coefficients at 100m hub heights.
-            </p>
-            <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-teal-600">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Sub-hourly Atmospheric Sync</span>
-            </div>
-          </div>
-
-          {/* Card 5 */}
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/80 hover:border-indigo-400/80 shadow-xs hover:shadow-md transition-all space-y-4 group">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-              <Globe className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">Pan-India Spatial Hierarchy</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Seamless drill-down from State SLDC (Gujarat, Rajasthan, Chhattisgarh) to District Hub (Patan, Kutch, Jodhpur) down to individual solar & wind parks.
-            </p>
-            <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-indigo-600">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Multi-Region Fleet Registry</span>
-            </div>
-          </div>
-
-          {/* Card 6 */}
-          <div className="p-6 rounded-3xl bg-white border border-slate-200/80 hover:border-rose-400/80 shadow-xs hover:shadow-md transition-all space-y-4 group">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 group-hover:scale-110 transition-transform">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">Predictive Ramp Warning Ledger</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Early detection of rapid generation drop-offs (&gt;20 MW / 15-min) with automated priority dispatch tickets and audit trails.
-            </p>
-            <div className="pt-2 flex items-center gap-2 text-xs font-semibold text-rose-600">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Real-Time Operator Alerting</span>
+              <span>Instant Dispatch Directives</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 5. INTELLIGENCE PIPELINE ARCHITECTURE                              */}
+      {/* 6. CALL TO ACTION BANNER (Full-width Photo Backdrop)              */}
       {/* ------------------------------------------------------------------ */}
-      <section id="architecture" className="py-20 bg-slate-100/70 border-t border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
-          <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <span className="text-xs font-sans font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-              Pipeline Flow
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-              End-to-End Operational Intelligence
+      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl bg-slate-900 border border-slate-800 p-6 sm:p-12 lg:p-14 text-white text-center">
+          {/* Panoramic Solar Farm Background Photo */}
+          <div className="absolute inset-0 opacity-25">
+            <img 
+              src="/landing-hero-hybrid-park.jpg" 
+              alt="Solar panels at golden hour" 
+              className="w-full h-full object-cover filter brightness-75"
+            />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-900/90" />
+
+          {/* Content */}
+          <div className="relative z-10 max-w-3xl mx-auto space-y-5 sm:space-y-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Next-Generation Clean Energy Operating System</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+              Ready to Protect Your Grid from Renewable Deficit Penalties?
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500">
-              How live telemetry transforms into automated dispatch approvals in sub-second cycles.
-            </p>
-          </div>
 
-          {/* Step Flow Diagram */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 relative">
-            
-            {/* Step 1 */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3 relative">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center font-mono text-xs font-bold text-emerald-700">
-                01
-              </div>
-              <h4 className="text-sm font-bold text-slate-900">Telemetry Ingestion</h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Connects to plant SCADA meters, inverter buses, and Open-Meteo satellite arrays every 15 minutes.
-              </p>
-              <div className="text-[10px] font-mono text-slate-400">API • Modbus • MQTT</div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3 relative">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center font-mono text-xs font-bold text-blue-700">
-                02
-              </div>
-              <h4 className="text-sm font-bold text-slate-900">Physics Engineering</h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Calculates solar zenith angles, panel tilt geometry, air mass index, and atmospheric clear-sky baseline.
-              </p>
-              <div className="text-[10px] font-mono text-slate-400">PVLib • Solar Angles • Shear</div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3 relative">
-              <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center font-mono text-xs font-bold text-amber-700">
-                03
-              </div>
-              <h4 className="text-sm font-bold text-slate-900">Quantile AI Inference</h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                XGBoost and gradient boosted models compute continuous probabilistic bounds across 72 hours.
-              </p>
-              <div className="text-[10px] font-mono text-slate-400">XGBoost • P10/P50/P90</div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3 relative">
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center font-mono text-xs font-bold text-emerald-700">
-                04
-              </div>
-              <h4 className="text-sm font-bold text-slate-900">Prescriptive Dispatch</h4>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Recommends exact BESS charge/discharge megawatts and logs approvals to Supabase database.
-              </p>
-              <div className="text-[10px] font-mono text-slate-400">BESS • Peaker • Audit Trail</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 6. DATABASE & SUPABASE SECTION                                     */}
-      {/* ------------------------------------------------------------------ */}
-      <section id="database" className="py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        <div className="bg-white border border-slate-200/80 rounded-3xl p-8 lg:p-12 shadow-xs grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          <div className="lg:col-span-6 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
-              <Database className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Clean & Simple Supabase PostgreSQL</span>
-            </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              Zero Unnecessary Data.<br />
-              <span className="text-emerald-600">Pure Operational Integrity.</span>
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-              Your Supabase instance at <code className="text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded font-mono text-xs">db.glydzrwquhaomhonzrnu.supabase.co</code> is configured with a streamlined 3-table architecture:
+            <p className="text-xs sm:text-sm md:text-base text-slate-300 max-w-xl mx-auto leading-relaxed">
+              Experience the live command center, run what-if weather simulations, and dispatch battery reserves in real time.
             </p>
 
-            <div className="space-y-2.5 pt-2 text-xs text-slate-600">
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center font-mono text-[10px] font-bold text-emerald-700 shrink-0">1</span>
-                <div>
-                  <strong className="text-slate-900">public.profiles</strong>: Operator credentials, SLDC station assignment, and role-based access.
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center font-mono text-[10px] font-bold text-blue-700 shrink-0">2</span>
-                <div>
-                  <strong className="text-slate-900">public.dispatch_actions</strong>: Audit log of BESS mitigation actions, financial savings, and CO₂ metrics.
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center font-mono text-[10px] font-bold text-amber-700 shrink-0">3</span>
-                <div>
-                  <strong className="text-slate-900">public.operator_preferences</strong>: Stores selected region, substation feeder, and operator view states.
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-2">
               <Link
-                to="/signup"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs hover:shadow-md transition-all cursor-pointer"
+                to="/dashboard"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer text-center"
               >
-                <span>Create Operator Account</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Enter Operational Control Room</span>
+                <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link
-                to="/login"
-                className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs transition-all shadow-2xs"
-              >
-                Sign In
-              </Link>
-            </div>
-          </div>
 
-          {/* Right Code / Schema View */}
-          <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-5 font-mono text-[11px] text-slate-300 overflow-x-auto shadow-inner space-y-2">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-slate-400 text-[10px]">
-              <span>supabase/simple_schema.sql</span>
-              <span className="text-emerald-400 font-bold">1-Click Ready</span>
+              <button
+                type="button"
+                onClick={handleDemoAccess}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 sm:px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold text-xs sm:text-sm backdrop-blur-md transition-all cursor-pointer text-center"
+              >
+                <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span>1-Click Demo (Krish Patel)</span>
+              </button>
             </div>
-            <p className="text-emerald-400">-- Profiles Table (Synced with auth.users)</p>
-            <p className="text-slate-400">CREATE TABLE public.profiles (</p>
-            <p className="pl-4">id UUID PRIMARY KEY DEFAULT gen_random_uuid(),</p>
-            <p className="pl-4">email TEXT UNIQUE NOT NULL,</p>
-            <p className="pl-4">full_name TEXT,</p>
-            <p className="pl-4">role TEXT DEFAULT 'Grid Operator',</p>
-            <p className="pl-4">station TEXT DEFAULT 'Gujarat SLDC'</p>
-            <p className="text-slate-400">);</p>
-            <p className="text-blue-400 pt-2">-- Real-Time Dispatch Audit Log</p>
-            <p className="text-slate-400">CREATE TABLE public.dispatch_actions (</p>
-            <p className="pl-4">id UUID PRIMARY KEY DEFAULT gen_random_uuid(),</p>
-            <p className="pl-4">action_type TEXT NOT NULL,</p>
-            <p className="pl-4">magnitude_mw NUMERIC NOT NULL,</p>
-            <p className="pl-4">financial_savings_inr NUMERIC DEFAULT 0,</p>
-            <p className="pl-4">created_at TIMESTAMPTZ DEFAULT now()</p>
-            <p className="text-slate-400">);</p>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------------ */}
-      {/* 7. FINAL CALL TO ACTION BANNER                                     */}
+      {/* 7. FOOTER                                                          */}
       {/* ------------------------------------------------------------------ */}
-      <section className="py-20 bg-white border-t border-slate-200/80 text-center relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 relative z-10">
-          <h2 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
-            Ready to Safeguard Your Grid from Intermittency?
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto">
-            Experience real-time clean energy forecasting, ramp risk warnings, and automated BESS dispatch in action.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
-            <Link
-              to="/dashboard"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xs hover:shadow-md transition-all hover:scale-102 cursor-pointer"
-            >
-              <span>Launch Operational Control Room</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              to="/signup"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm transition-all shadow-2xs"
-            >
-              <span>Create New Operator Account</span>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* 8. INSTITUTIONAL FOOTER (Clean White Footer)                       */}
-      {/* ------------------------------------------------------------------ */}
-      <footer className="bg-white border-t border-slate-200 py-12 text-slate-600 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-8">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
-              </div>
-              <span className="font-extrabold text-slate-900 font-sans text-base">SURGE</span>
-              <span className="text-slate-300">|</span>
-              <span className="text-[11px] text-slate-500">Forecast the Grid. Before the Gap.</span>
+      <footer className="border-t border-slate-200 bg-white py-10 sm:py-12 text-slate-500 text-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black shrink-0">
+              <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
             </div>
-            <div className="flex items-center gap-2 font-mono text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>All 6 Regional Grid Hubs Nominal</span>
+            <div>
+              <div className="font-extrabold text-slate-900 text-sm">SURGE v3.2 GRID</div>
+              <p className="text-[10px] text-slate-400">National Renewable Energy Management & Dispatch Platform</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-[11px]">
-            <div className="space-y-2">
-              <h5 className="font-bold text-slate-900 uppercase tracking-wider">Control Room</h5>
-              <div className="space-y-1.5">
-                <div><Link to="/dashboard" className="hover:text-blue-600">Command Center</Link></div>
-                <div><Link to="/forecast" className="hover:text-blue-600">72h Forecast Engine</Link></div>
-                <div><Link to="/alerts" className="hover:text-blue-600">Risk & Ramp Alerts</Link></div>
-                <div><Link to="/recommendations" className="hover:text-blue-600">BESS Storage Dispatch</Link></div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h5 className="font-bold text-slate-900 uppercase tracking-wider">Telemetry</h5>
-              <div className="space-y-1.5">
-                <div><Link to="/plants" className="hover:text-blue-600">Plant Digital Twin</Link></div>
-                <div><Link to="/weather" className="hover:text-blue-600">Atmospheric GHI & Wind</Link></div>
-                <div><Link to="/accuracy" className="hover:text-blue-600">Model Verification (MAPE)</Link></div>
-                <div><Link to="/settings" className="hover:text-blue-600">SCADA Thresholds</Link></div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h5 className="font-bold text-slate-900 uppercase tracking-wider">Authentication</h5>
-              <div className="space-y-1.5">
-                <div><Link to="/login" className="hover:text-blue-600">Operator Sign In</Link></div>
-                <div><Link to="/signup" className="hover:text-blue-600">Create Operator Account</Link></div>
-                <div><span onClick={handleLaunchDemo} className="hover:text-amber-600 cursor-pointer">Quick Demo Access</span></div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h5 className="font-bold text-slate-900 uppercase tracking-wider">Compliance</h5>
-              <div className="space-y-1.5 text-slate-500">
-                <div>CERC DSM Regulations 2022</div>
-                <div>Indian Electricity Grid Code (IEGC)</div>
-                <div>CEA Cyber Security Guidelines</div>
-                <div>REMC Operational Protocols</div>
-              </div>
-            </div>
+          <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-slate-600 font-medium text-center">
+            <a href="#showcase" className="hover:text-blue-600">Infrastructure</a>
+            <a href="#simulator" className="hover:text-blue-600">Simulator</a>
+            <a href="#capabilities" className="hover:text-blue-600">Capabilities</a>
+            <Link to="/login" className="hover:text-blue-600">Operator Login</Link>
+            <Link to="/signup" className="hover:text-blue-600">Register</Link>
           </div>
 
-          <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-            <span>© 2026 SURGE Grid Intelligence Systems. All rights reserved.</span>
-            <span>Supabase Database: <code className="text-slate-700 bg-slate-100 px-1 py-0.5 rounded font-mono">db.glydzrwquhaomhonzrnu.supabase.co</code></span>
+          <div className="text-[10px] sm:text-[11px] text-slate-400 font-mono text-center md:text-right">
+            Compliant with CERC DSM Regulations 2024 &bull; Made for India
           </div>
         </div>
       </footer>

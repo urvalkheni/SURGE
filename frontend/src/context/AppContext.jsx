@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { fetchHybridForecast, fetchMetrics, fetchStates, fetchCities, fetchAreas, trainStateModel } from '../services/api';
 import { generateDynamicAlerts, generateDynamicRecommendations } from '../utils/dynamicRiskEngine';
+import { MULTI_PLANT_DATA } from '../config/roles';
 
 const DEFAULT_SETTINGS = {
   operatorName: "Krish Patel",
@@ -26,6 +27,10 @@ const DEFAULT_SETTINGS = {
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
+  // Assigned plant for plant operations engineer role
+  const [assignedPlantId, setAssignedPlantId] = useState('sanand-solar');
+  const assignedPlant = MULTI_PLANT_DATA.find(p => p.id === assignedPlantId) || MULTI_PLANT_DATA[0];
+
   // Load persistent settings from localStorage
   const [settings, setSettings] = useState(() => {
     try {
@@ -80,6 +85,10 @@ export const AppProvider = ({ children }) => {
   const [approvedActions, setApprovedActions] = useState([]);
   const [demoMode, setDemoMode] = useState(false);
   const [activeHorizonStep, setActiveHorizonStep] = useState(null);
+
+  // Mobile navigation drawer state
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const toggleMobileSidebar = () => setMobileSidebarOpen(prev => !prev);
 
   // Initialize available states, cities, and areas
   useEffect(() => {
@@ -268,9 +277,16 @@ export const AppProvider = ({ children }) => {
       setDemoMode,
       activeHorizonStep,
       setActiveHorizonStep,
+      assignedPlantId,
+      setAssignedPlantId,
+      assignedPlant,
+      multiPlantList: MULTI_PLANT_DATA,
       settings,
       updateSettings,
-      resetSettings
+      resetSettings,
+      mobileSidebarOpen,
+      setMobileSidebarOpen,
+      toggleMobileSidebar
     }}>
       {children}
     </AppContext.Provider>

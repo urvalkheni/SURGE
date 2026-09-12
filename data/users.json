@@ -43,5 +43,86 @@
     "role": "Senior Dispatch Engineer",
     "station": "Gujarat SLDC - Gotri",
     "created_at": "2026-09-12T14:38:33.198420"
+  },
+  "dispatcher.test@sldc.gujarat.gov.in": {
+    "id": "usr-634b150e",
+    "email": "dispatcher.test@sldc.gujarat.gov.in",
+    "name": "Test Google Dispatcher",
+    "password_hash": "fb1f044f6216b08d3aa5c150bd90e1363f3ce216df23fe5d173014d34283342a",
+    "role": "Chief Grid Dispatcher",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T15:51:40.955366"
+  },
+  "custom.operator@example.com": {
+    "id": "usr-78bf51cd",
+    "email": "custom.operator@example.com",
+    "name": "Custom Operator",
+    "password_hash": "fb1f044f6216b08d3aa5c150bd90e1363f3ce216df23fe5d173014d34283342a",
+    "role": "Chief Grid Dispatcher",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T16:03:52.562090"
+  },
+  "operator_087791@sldc.gujarat.gov.in": {
+    "id": "usr-9cfcd256",
+    "email": "operator_087791@sldc.gujarat.gov.in",
+    "name": "Anil Sharma (Senior Engineer)",
+    "password_hash": "d519397a4e89a7a66d28a266ed00a679bdee93fddec9ebba7d01ff27c39c1a99",
+    "role": "Plant Operations Engineer",
+    "station": "Charanka Mega Solar Control Center",
+    "created_at": "2026-09-12T17:04:34.203585"
+  },
+  "demo@123456": {
+    "id": "usr-a2f2468d",
+    "email": "demo@123456",
+    "name": "demo",
+    "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "Energy Trading Analyst",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T17:07:19.755760"
+  },
+  "demo112@gmail.com": {
+    "id": "usr-3bd027fa",
+    "email": "demo112@gmail.com",
+    "name": "demo",
+    "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "Plant Operations Engineer",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T17:20:24.100808"
+  },
+  "teni@gmail.com": {
+    "id": "usr-50cdaf89",
+    "email": "teni@gmail.com",
+    "name": "teni",
+    "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "Plant Operations Engineer",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T17:25:53.049224"
+  },
+  "test.new.op@sldc.gujarat.gov.in": {
+    "id": "f67fcbd1-c81e-4634-94a3-ec123aefbec2",
+    "email": "test.new.op@sldc.gujarat.gov.in",
+    "name": "Test New Op (Updated)",
+    "password_hash": "hash123456",
+    "role": "Energy Trading Analyst",
+    "station": "Adani Solar",
+    "created_at": "2026-09-12T12:05:51.973237+00:00"
+  },
+  "live.supabase@sldc.gujarat.gov.in": {
+    "id": "ca84d444-11a2-407f-a771-c06f0afc8f44",
+    "email": "live.supabase@sldc.gujarat.gov.in",
+    "name": "Live Supabase Operator (Chief)",
+    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "role": "Chief Grid Dispatcher",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T12:06:56.140542+00:00"
+  },
+  "teni12334@gmail.com": {
+    "id": "591527e7-3fdf-4cea-a1bd-fc8882283067",
+    "email": "teni12334@gmail.com",
+    "name": "teni",
+    "password_hash": "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92",
+    "role": "Energy Trading Analyst",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T12:08:20.466514+00:00"
   }
 }

@@ -129,8 +129,8 @@ export default function Signup() {
               <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-600 transition-colors">
                 <span>&larr; Back to Overview</span>
               </Link>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                Supabase Auth
+              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-bold">
+                SQLite DB Auth
               </span>
             </div>
 

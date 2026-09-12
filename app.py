@@ -13,6 +13,7 @@ import json
 import time
 import hashlib
 import secrets
+import base64
 from datetime import datetime
 from typing import Optional, List, Dict
 import requests
@@ -21,7 +22,7 @@ import numpy as np
 import joblib
 import pvlib
 from pydantic import BaseModel
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from xgboost import XGBRegressor
 
@@ -30,7 +31,7 @@ from src.wind.train_wind import engineer_wind_features
 from src.models.quantile_forecaster import SiteQuantileForecaster
 from src.models.demand_forecaster import DemandForecaster
 from src.prediction.deficit_engine import compute_probabilistic_deficit, slice_forward_window
-from db import db_create_user, db_get_user, db_log_dispatch, db_get_dispatch_history, get_db_inspection
+from db import db_create_user, db_get_user, db_save_user_profile, db_log_dispatch, db_get_dispatch_history, get_db_inspection
 
 app = FastAPI(
     title="AI-Powered Renewable Generation Forecasting API (State, City & Area Level)",
@@ -73,6 +74,11 @@ DEFAULT_WIND_MODEL_PATH = "models/wind_forecast_best.joblib"
 SOLAR_QUANTILE_MODEL_PATH = "models/solar_quantile_best.joblib"
 WIND_QUANTILE_MODEL_PATH = "models/wind_quantile_best.joblib"
 DEMAND_MODEL_PATH = "models/demand_model.joblib"
+
+# Google OAuth 2.0 Credentials
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+
 
 
 def _clean_param(val):
@@ -944,14 +950,48 @@ class UserLoginRequest(BaseModel):
     email: str
     password: str
 
+class UserProfileUpdateRequest(BaseModel):
+    email: str
+    name: str
+    role: Optional[str] = "Chief Grid Dispatcher"
+    station: Optional[str] = "Gujarat SLDC - Gotri, Vadodara"
+
 class DispatchRequest(BaseModel):
     action_type: str
     magnitude_mw: float
     target_facility: str
     operator_name: Optional[str] = "Krish Patel"
+    operator_role: Optional[str] = None
     rationale: Optional[str] = "Manual operator dispatch approval"
     financial_savings_inr: Optional[int] = 50000
     co2_avoided_kg: Optional[float] = 12000.0
+
+class BatteryDispatchRequest(BaseModel):
+    action: str  # CHARGE, DISCHARGE
+    power_mw: float
+    mode: Optional[str] = "AUTO_ARBITRAGE"
+    user_role: Optional[str] = None
+    station: Optional[str] = "Sanand BESS 20MW/50MWh"
+
+DISPATCH_AUTHORIZED_ROLES = {
+    "chief_grid_dispatcher",
+    "chief grid dispatcher",
+    "dispatcher",
+    "grid_dispatcher",
+    "admin"
+}
+
+def verify_dispatch_role(role_from_body: Optional[str] = None, x_user_role: Optional[str] = None):
+    """
+    Enforces RBAC on physical dispatch endpoints.
+    Returns HTTP 403 Forbidden if the role is not authorized for physical CONTROL.
+    """
+    raw_role = (x_user_role or role_from_body or "").strip().lower().replace("-", "_")
+    if not raw_role or raw_role not in DISPATCH_AUTHORIZED_ROLES:
+        raise HTTPException(
+            status_code=403, 
+            detail=f"HTTP 403 Forbidden: Role '{raw_role or 'Anonymous'}' is not authorized to issue physical dispatch directives. Only Chief Grid Dispatcher possesses physical CONTROL clearance."
+        )
 
 @app.post("/auth/signup")
 def signup_user(req: UserSignupRequest):
@@ -1013,13 +1053,125 @@ def login_user(req: UserLoginRequest):
         "token": f"jwt_{secrets.token_urlsafe(24)}"
     }
 
+class GoogleAuthRequest(BaseModel):
+    credential: Optional[str] = None  # Google ID Token from Google Identity Services
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
+    role: Optional[str] = "Chief Grid Dispatcher"
+    station: Optional[str] = "Gujarat SLDC - Gotri, Vadodara"
+
+@app.post("/auth/google")
+def google_auth_user(req: GoogleAuthRequest):
+    email = None
+    name = None
+    picture = req.picture
+
+    # 1. If Google ID Token is provided, verify with Google API or decode JWT
+    if req.credential:
+        try:
+            token_resp = requests.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={req.credential}",
+                timeout=4.0
+            )
+            if token_resp.ok:
+                payload = token_resp.json()
+                email = payload.get("email")
+                name = payload.get("name") or payload.get("given_name")
+                picture = payload.get("picture", picture)
+            else:
+                # Basic JWT decoding fallback
+                parts = req.credential.split(".")
+                if len(parts) >= 2:
+                    padded = parts[1] + "=" * ((4 - len(parts[1]) % 4) % 4)
+                    decoded_bytes = base64.urlsafe_b64decode(padded)
+                    payload = json.loads(decoded_bytes)
+                    email = payload.get("email")
+                    name = payload.get("name") or payload.get("given_name")
+                    picture = payload.get("picture", picture)
+        except Exception as e:
+            print(f"[Google Auth] Token verification notice: {e}")
+
+    # 2. Fallback to direct parameters (for dev / testing)
+    if not email and req.email:
+        email = req.email.strip().lower()
+        name = req.name or email.split("@")[0].title()
+
+    if not email:
+        raise HTTPException(status_code=400, detail="Unable to extract valid Google user profile or email.")
+
+    email = email.strip().lower()
+
+    # 3. Check existing user or auto-provision
+    user = db_get_user(email)
+    if not user:
+        user = db_create_user(
+            name=name or email.split("@")[0].title(),
+            email=email,
+            password_hash=hash_pw("google_oauth_authorized"),
+            role=req.role or "Grid Operator",
+            station=req.station or "Gujarat SLDC - Gotri, Vadodara"
+        )
+
+    return {
+        "status": "success",
+        "message": f"Successfully authenticated via Google as {user['name']}.",
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "station": user["station"],
+            "picture": picture,
+            "provider": "google"
+        },
+        "token": f"jwt_{secrets.token_urlsafe(24)}"
+    }
+
+@app.get("/auth/profile")
+def get_user_profile(email: str = Query(...)):
+    user = db_get_user(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User profile not found in database.")
+    return {
+        "status": "success", 
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "station": user["station"],
+            "created_at": user["created_at"]
+        }
+    }
+
+@app.post("/auth/profile")
+def save_user_profile(req: UserProfileUpdateRequest):
+    if not req.email or "@" not in req.email:
+        raise HTTPException(status_code=400, detail="Invalid email provided.")
+    if not req.name.strip():
+        raise HTTPException(status_code=400, detail="Name cannot be empty.")
+    
+    updated_user = db_save_user_profile(
+        email=req.email,
+        name=req.name,
+        role=req.role or "Chief Grid Dispatcher",
+        station=req.station or "Gujarat SLDC - Gotri, Vadodara"
+    )
+    return {
+        "status": "success",
+        "message": f"Profile for {updated_user['name']} saved to database!",
+        "user": updated_user
+    }
+
 @app.get("/dispatch/history")
 def get_dispatch_history():
     logs = db_get_dispatch_history()
     return {"status": "success", "total_events": len(logs), "logs": logs}
 
 @app.post("/dispatch/execute")
-def execute_dispatch(req: DispatchRequest):
+def execute_dispatch(req: DispatchRequest, x_user_role: Optional[str] = Header(None)):
+    verify_dispatch_role(req.operator_role, x_user_role)
     new_event = {
         "id": f"dsp-{secrets.token_hex(3)}",
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -1027,6 +1179,7 @@ def execute_dispatch(req: DispatchRequest):
         "magnitude_mw": round(float(req.magnitude_mw), 1),
         "target_facility": req.target_facility,
         "operator_name": req.operator_name,
+        "operator_role": req.operator_role or x_user_role or "chief_grid_dispatcher",
         "status": "EXECUTED",
         "rationale": req.rationale,
         "financial_savings_inr": req.financial_savings_inr or 45000,
@@ -1042,6 +1195,40 @@ def execute_dispatch(req: DispatchRequest):
         "event": saved_event
     }
 
+@app.post("/battery/dispatch")
+def dispatch_battery(req: BatteryDispatchRequest, x_user_role: Optional[str] = Header(None)):
+    verify_dispatch_role(req.user_role, x_user_role)
+    
+    event = {
+        "id": f"bess-{secrets.token_hex(3)}",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "action_type": f"BESS_{req.action.upper()}",
+        "magnitude_mw": round(float(req.power_mw), 1),
+        "target_facility": req.station or "Sanand BESS 20MW/50MWh",
+        "operator_name": "Chief Grid Dispatcher",
+        "operator_role": req.user_role or x_user_role or "chief_grid_dispatcher",
+        "status": "EXECUTED",
+        "rationale": f"BESS physical {req.action.lower()} executed in {req.mode} mode",
+        "financial_savings_inr": 25000,
+        "co2_avoided_kg": 5400.0
+    }
+    saved_event = db_log_dispatch(event)
+    return {
+        "status": "success",
+        "message": f"Physical BESS {req.action.upper()} of {req.power_mw} MW successfully executed on {req.station}.",
+        "event": saved_event
+    }
+
+@app.post("/battery/charge")
+def charge_battery(power_mw: float = Query(10.0), x_user_role: Optional[str] = Header(None)):
+    verify_dispatch_role(None, x_user_role)
+    return {"status": "success", "message": f"Battery charge of {power_mw} MW initiated."}
+
+@app.post("/battery/discharge")
+def discharge_battery(power_mw: float = Query(15.0), x_user_role: Optional[str] = Header(None)):
+    verify_dispatch_role(None, x_user_role)
+    return {"status": "success", "message": f"Battery discharge of {power_mw} MW initiated."}
+
 @app.get("/api/db/inspect")
 def inspect_database():
     """Inspects database tables, schema, record counts, and recent entries."""
@@ -1050,4 +1237,4 @@ def inspect_database():
 if __name__ == "__main__":
     import uvicorn
     print("Starting Multi-State, City & Area API Server on http://127.0.0.1:8000 ...")
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
