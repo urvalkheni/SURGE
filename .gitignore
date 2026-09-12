@@ -41,3 +41,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+
+# Local testing frontend (excluded from git upload)
+frontend/

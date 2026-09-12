@@ -1,0 +1,554 @@
+{
+    "gujarat": {
+        "state_name": "Gujarat",
+        "hub": "Ahmedabad / Kutch RE Hub",
+        "coordinates": {
+            "lat": 23.02,
+            "lon": 72.57
+        },
+        "optimal_tilt_deg": 22.0,
+        "elevation_m": 53,
+        "solar_metrics": {
+            "MAE_MW": 0.961,
+            "RMSE_MW": 1.705,
+            "nRMSE_pct": 1.71,
+            "R2": 0.9971
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.203,
+            "RMSE_MW": 0.319,
+            "nRMSE_pct": 0.32,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.28
+    },
+    "rajasthan": {
+        "state_name": "Rajasthan",
+        "hub": "Bhadla Phase IV / Jaisalmer",
+        "coordinates": {
+            "lat": 27.53,
+            "lon": 71.91
+        },
+        "optimal_tilt_deg": 26.0,
+        "elevation_m": 224,
+        "solar_metrics": {
+            "MAE_MW": 0.942,
+            "RMSE_MW": 1.639,
+            "nRMSE_pct": 1.64,
+            "R2": 0.9975
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.19,
+            "RMSE_MW": 0.294,
+            "nRMSE_pct": 0.29,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "maharashtra": {
+        "state_name": "Maharashtra",
+        "hub": "Solapur / Pune Industrial Grid",
+        "coordinates": {
+            "lat": 18.52,
+            "lon": 73.85
+        },
+        "optimal_tilt_deg": 19.0,
+        "elevation_m": 560,
+        "solar_metrics": {
+            "MAE_MW": 0.843,
+            "RMSE_MW": 1.457,
+            "nRMSE_pct": 1.46,
+            "R2": 0.9979
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.164,
+            "RMSE_MW": 0.241,
+            "nRMSE_pct": 0.24,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "karnataka": {
+        "state_name": "Karnataka",
+        "hub": "Pavagada Solar / Chitradurga Wind",
+        "coordinates": {
+            "lat": 14.16,
+            "lon": 77.26
+        },
+        "optimal_tilt_deg": 14.0,
+        "elevation_m": 650,
+        "solar_metrics": {
+            "MAE_MW": 0.757,
+            "RMSE_MW": 1.333,
+            "nRMSE_pct": 1.33,
+            "R2": 0.9983
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.169,
+            "RMSE_MW": 0.297,
+            "nRMSE_pct": 0.3,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "tamil_nadu": {
+        "state_name": "Tamil Nadu",
+        "hub": "Muppandal Wind Pass / Kamuthi",
+        "coordinates": {
+            "lat": 8.24,
+            "lon": 77.55
+        },
+        "optimal_tilt_deg": 9.0,
+        "elevation_m": 40,
+        "solar_metrics": {
+            "MAE_MW": 0.468,
+            "RMSE_MW": 0.848,
+            "nRMSE_pct": 0.85,
+            "R2": 0.9993
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.145,
+            "RMSE_MW": 0.27,
+            "nRMSE_pct": 0.27,
+            "R2": 0.9998
+        },
+        "training_time_s": 0.25
+    },
+    "madhya_pradesh": {
+        "state_name": "Madhya Pradesh",
+        "hub": "Rewa Ultra Mega Solar",
+        "coordinates": {
+            "lat": 24.53,
+            "lon": 81.3
+        },
+        "optimal_tilt_deg": 24.0,
+        "elevation_m": 304,
+        "solar_metrics": {
+            "MAE_MW": 0.783,
+            "RMSE_MW": 1.344,
+            "nRMSE_pct": 1.34,
+            "R2": 0.9981
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.179,
+            "RMSE_MW": 0.251,
+            "nRMSE_pct": 0.25,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "andhra_pradesh": {
+        "state_name": "Andhra Pradesh",
+        "hub": "Kurnool Ultra Mega Solar Park",
+        "coordinates": {
+            "lat": 15.82,
+            "lon": 78.03
+        },
+        "optimal_tilt_deg": 16.0,
+        "elevation_m": 273,
+        "solar_metrics": {
+            "MAE_MW": 0.767,
+            "RMSE_MW": 1.316,
+            "nRMSE_pct": 1.32,
+            "R2": 0.9982
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.175,
+            "RMSE_MW": 0.254,
+            "nRMSE_pct": 0.25,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.24
+    },
+    "telangana": {
+        "state_name": "Telangana",
+        "hub": "Mahbubnagar Clean Energy Hub",
+        "coordinates": {
+            "lat": 17.38,
+            "lon": 78.48
+        },
+        "optimal_tilt_deg": 17.0,
+        "elevation_m": 505,
+        "solar_metrics": {
+            "MAE_MW": 0.821,
+            "RMSE_MW": 1.403,
+            "nRMSE_pct": 1.4,
+            "R2": 0.9981
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.162,
+            "RMSE_MW": 0.237,
+            "nRMSE_pct": 0.24,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "uttar_pradesh": {
+        "state_name": "Uttar Pradesh",
+        "hub": "Bundelkhand / Mirzapur Solar",
+        "coordinates": {
+            "lat": 25.14,
+            "lon": 82.56
+        },
+        "optimal_tilt_deg": 25.0,
+        "elevation_m": 80,
+        "solar_metrics": {
+            "MAE_MW": 0.591,
+            "RMSE_MW": 1.097,
+            "nRMSE_pct": 1.1,
+            "R2": 0.9986
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.175,
+            "RMSE_MW": 0.275,
+            "nRMSE_pct": 0.28,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "punjab": {
+        "state_name": "Punjab",
+        "hub": "Bathinda Green Energy Cluster",
+        "coordinates": {
+            "lat": 30.21,
+            "lon": 74.94
+        },
+        "optimal_tilt_deg": 30.0,
+        "elevation_m": 211,
+        "solar_metrics": {
+            "MAE_MW": 0.857,
+            "RMSE_MW": 1.68,
+            "nRMSE_pct": 1.68,
+            "R2": 0.9971
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.173,
+            "RMSE_MW": 0.256,
+            "nRMSE_pct": 0.26,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.26
+    },
+    "haryana": {
+        "state_name": "Haryana",
+        "hub": "Mahendragarh Solar Feeder",
+        "coordinates": {
+            "lat": 28.28,
+            "lon": 76.15
+        },
+        "optimal_tilt_deg": 28.0,
+        "elevation_m": 260,
+        "solar_metrics": {
+            "MAE_MW": 0.878,
+            "RMSE_MW": 1.538,
+            "nRMSE_pct": 1.54,
+            "R2": 0.9975
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.186,
+            "RMSE_MW": 0.307,
+            "nRMSE_pct": 0.31,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.27
+    },
+    "kerala": {
+        "state_name": "Kerala",
+        "hub": "Banasura Sagar Floating Solar",
+        "coordinates": {
+            "lat": 11.6,
+            "lon": 76.08
+        },
+        "optimal_tilt_deg": 11.0,
+        "elevation_m": 750,
+        "solar_metrics": {
+            "MAE_MW": 0.431,
+            "RMSE_MW": 0.777,
+            "nRMSE_pct": 0.78,
+            "R2": 0.9993
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.153,
+            "RMSE_MW": 0.227,
+            "nRMSE_pct": 0.23,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "odisha": {
+        "state_name": "Odisha",
+        "hub": "Koraput High-Altitude Solar",
+        "coordinates": {
+            "lat": 18.81,
+            "lon": 82.71
+        },
+        "optimal_tilt_deg": 19.0,
+        "elevation_m": 870,
+        "solar_metrics": {
+            "MAE_MW": 0.691,
+            "RMSE_MW": 1.211,
+            "nRMSE_pct": 1.21,
+            "R2": 0.9986
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.134,
+            "RMSE_MW": 0.185,
+            "nRMSE_pct": 0.18,
+            "R2": 1.0
+        },
+        "training_time_s": 0.25
+    },
+    "west_bengal": {
+        "state_name": "West Bengal",
+        "hub": "Purulia Pumped & Solar Array",
+        "coordinates": {
+            "lat": 23.33,
+            "lon": 86.36
+        },
+        "optimal_tilt_deg": 23.0,
+        "elevation_m": 228,
+        "solar_metrics": {
+            "MAE_MW": 0.704,
+            "RMSE_MW": 1.271,
+            "nRMSE_pct": 1.27,
+            "R2": 0.998
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.171,
+            "RMSE_MW": 0.278,
+            "nRMSE_pct": 0.28,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.26
+    },
+    "bihar": {
+        "state_name": "Bihar",
+        "hub": "Gaya Clean Energy Substation",
+        "coordinates": {
+            "lat": 24.79,
+            "lon": 85.0
+        },
+        "optimal_tilt_deg": 25.0,
+        "elevation_m": 111,
+        "solar_metrics": {
+            "MAE_MW": 0.71,
+            "RMSE_MW": 1.283,
+            "nRMSE_pct": 1.28,
+            "R2": 0.998
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.166,
+            "RMSE_MW": 0.274,
+            "nRMSE_pct": 0.27,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "assam": {
+        "state_name": "Assam",
+        "hub": "Amguri Solar Park",
+        "coordinates": {
+            "lat": 26.75,
+            "lon": 94.21
+        },
+        "optimal_tilt_deg": 26.0,
+        "elevation_m": 100,
+        "solar_metrics": {
+            "MAE_MW": 0.725,
+            "RMSE_MW": 1.263,
+            "nRMSE_pct": 1.26,
+            "R2": 0.998
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.121,
+            "RMSE_MW": 0.238,
+            "nRMSE_pct": 0.24,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "himachal_pradesh": {
+        "state_name": "Himachal Pradesh",
+        "hub": "Spiti Valley Cold-Desert Solar",
+        "coordinates": {
+            "lat": 32.24,
+            "lon": 77.18
+        },
+        "optimal_tilt_deg": 32.0,
+        "elevation_m": 2050,
+        "solar_metrics": {
+            "MAE_MW": 1.11,
+            "RMSE_MW": 1.903,
+            "nRMSE_pct": 1.9,
+            "R2": 0.9976
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.13,
+            "RMSE_MW": 0.206,
+            "nRMSE_pct": 0.21,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "uttarakhand": {
+        "state_name": "Uttarakhand",
+        "hub": "Haridwar Industrial RE Feeder",
+        "coordinates": {
+            "lat": 29.94,
+            "lon": 78.16
+        },
+        "optimal_tilt_deg": 30.0,
+        "elevation_m": 314,
+        "solar_metrics": {
+            "MAE_MW": 0.878,
+            "RMSE_MW": 1.478,
+            "nRMSE_pct": 1.48,
+            "R2": 0.9977
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.183,
+            "RMSE_MW": 0.294,
+            "nRMSE_pct": 0.29,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.24
+    },
+    "chhattisgarh": {
+        "state_name": "Chhattisgarh",
+        "hub": "Rajnandgaon Solar Array",
+        "coordinates": {
+            "lat": 21.1,
+            "lon": 81.03
+        },
+        "optimal_tilt_deg": 21.0,
+        "elevation_m": 307,
+        "solar_metrics": {
+            "MAE_MW": 0.752,
+            "RMSE_MW": 1.293,
+            "nRMSE_pct": 1.29,
+            "R2": 0.9982
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.169,
+            "RMSE_MW": 0.259,
+            "nRMSE_pct": 0.26,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "jharkhand": {
+        "state_name": "Jharkhand",
+        "hub": "Bokaro Solar Park",
+        "coordinates": {
+            "lat": 23.66,
+            "lon": 86.15
+        },
+        "optimal_tilt_deg": 23.0,
+        "elevation_m": 210,
+        "solar_metrics": {
+            "MAE_MW": 0.721,
+            "RMSE_MW": 1.317,
+            "nRMSE_pct": 1.32,
+            "R2": 0.9981
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.162,
+            "RMSE_MW": 0.267,
+            "nRMSE_pct": 0.27,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "goa": {
+        "state_name": "Goa",
+        "hub": "Panaji Coastal Microgrid",
+        "coordinates": {
+            "lat": 15.49,
+            "lon": 73.82
+        },
+        "optimal_tilt_deg": 15.0,
+        "elevation_m": 10,
+        "solar_metrics": {
+            "MAE_MW": 0.611,
+            "RMSE_MW": 1.05,
+            "nRMSE_pct": 1.05,
+            "R2": 0.9987
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.154,
+            "RMSE_MW": 0.224,
+            "nRMSE_pct": 0.22,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "jammu_kashmir": {
+        "state_name": "Jammu & Kashmir",
+        "hub": "Jammu Solar Power Feeder",
+        "coordinates": {
+            "lat": 32.72,
+            "lon": 74.85
+        },
+        "optimal_tilt_deg": 33.0,
+        "elevation_m": 327,
+        "solar_metrics": {
+            "MAE_MW": 0.929,
+            "RMSE_MW": 1.645,
+            "nRMSE_pct": 1.64,
+            "R2": 0.9974
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.18,
+            "RMSE_MW": 0.268,
+            "nRMSE_pct": 0.27,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    },
+    "ladakh": {
+        "state_name": "Ladakh",
+        "hub": "Pang 10 GW Mega Solar Park",
+        "coordinates": {
+            "lat": 34.15,
+            "lon": 77.57
+        },
+        "optimal_tilt_deg": 34.0,
+        "elevation_m": 3500,
+        "solar_metrics": {
+            "MAE_MW": 0.663,
+            "RMSE_MW": 1.419,
+            "nRMSE_pct": 1.42,
+            "R2": 0.9989
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.128,
+            "RMSE_MW": 0.281,
+            "nRMSE_pct": 0.28,
+            "R2": 0.9994
+        },
+        "training_time_s": 0.25
+    },
+    "delhi": {
+        "state_name": "Delhi NCR",
+        "hub": "Delhi Rooftop & Microgrid Pool",
+        "coordinates": {
+            "lat": 28.61,
+            "lon": 77.2
+        },
+        "optimal_tilt_deg": 28.0,
+        "elevation_m": 216,
+        "solar_metrics": {
+            "MAE_MW": 0.877,
+            "RMSE_MW": 1.537,
+            "nRMSE_pct": 1.54,
+            "R2": 0.9974
+        },
+        "wind_metrics": {
+            "MAE_MW": 0.167,
+            "RMSE_MW": 0.265,
+            "nRMSE_pct": 0.27,
+            "R2": 0.9999
+        },
+        "training_time_s": 0.25
+    }
+}
