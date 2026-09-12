@@ -62,11 +62,11 @@ export function AppHeader({
           </Button>
 
           <Link href="/dashboard" className="flex items-center gap-2.5 focus-ring rounded-md">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary-dark text-white">
-              <Zap className="size-4" />
+            <div className="flex size-8 items-center justify-center rounded-md overflow-hidden shrink-0">
+              <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
             </div>
             <span className="font-display font-bold text-base tracking-tight text-foreground hidden sm:inline-block">
-              Renewable<span className="text-primary">IQ</span>
+              SURGE
             </span>
           </Link>
 

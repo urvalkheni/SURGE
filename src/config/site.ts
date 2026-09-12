@@ -2,17 +2,17 @@
  * Site Metadata & Configuration
  */
 export const siteConfig = {
-  name: 'RenewableIQ',
-  shortName: 'RenewableIQ',
+  name: 'SURGE',
+  shortName: 'SURGE',
   description:
-    'AI-powered renewable energy generation forecasting and grid intelligence platform for commercial asset owners and transmission operators.',
-  url: 'https://renewableiq.energy',
-  ogImage: 'https://renewableiq.energy/og.jpg',
-  author: 'RenewableIQ Engineering Team',
+    'SURGE — Forecast the Grid. Before the Gap. AI-powered renewable generation forecasting and grid intelligence platform.',
+  url: 'https://surge.energy',
+  ogImage: '/surge-logo-horizontal.png',
+  author: 'SURGE Engineering Team',
   links: {
     docs: '/docs',
     dashboard: '/dashboard',
-    github: 'https://github.com/renewableiq/renewableiq',
+    github: 'https://github.com/surge-energy/surge',
   },
   telemetry: {
     defaultRefreshIntervalMs: 60000,

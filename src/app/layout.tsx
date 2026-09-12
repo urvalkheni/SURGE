@@ -33,6 +33,9 @@ export const metadata: Metadata = {
     'clean energy',
   ],
   authors: [{ name: siteConfig.author }],
+  icons: {
+    icon: '/surge-icon.png',
+  },
 };
 
 export default function RootLayout({

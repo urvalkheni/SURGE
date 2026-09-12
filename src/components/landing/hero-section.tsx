@@ -72,7 +72,7 @@ export function HeroSection() {
               variants={itemVariants}
               className="text-base sm:text-lg text-foreground-secondary leading-relaxed max-w-xl"
             >
-              RenewableIQ combines weather intelligence, historical generation, and plant parameters 
+              SURGE combines weather intelligence, historical generation, and plant parameters 
               to forecast renewable output up to 72 hours ahead — then translates uncertainty into operational action.
             </motion.p>
 

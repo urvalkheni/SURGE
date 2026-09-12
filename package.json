@@ -1,8 +1,8 @@
 {
-  "name": "renewableiq",
+  "name": "surge",
   "version": "1.0.0",
   "private": true,
-  "description": "AI-powered renewable energy generation forecasting and grid intelligence platform",
+  "description": "SURGE — Forecast the Grid. Before the Gap. AI-powered renewable generation forecasting and grid intelligence platform",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

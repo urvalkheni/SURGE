@@ -3,7 +3,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { DashboardView } from '@/components/dashboard/dashboard-view';
 
 export const metadata = {
-  title: 'Operations Command Center · Ahmedabad 42 MW | RenewableIQ',
+  title: 'Operations Command Center · Ahmedabad 42 MW | SURGE',
   description: 'Industrial renewable energy generation forecasting, real-time grid ramp triage, and prescriptive BESS battery dispatch command center.',
 };
 

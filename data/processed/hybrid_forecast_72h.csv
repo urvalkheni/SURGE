@@ -1,0 +1,25 @@
+timestamp,solar_generation_mw,wind_generation_mw,total_renewable_mw,generation_p10_mw,generation_p90_mw,grid_demand_mw,grid_balance_mw,expected_deficit_mw,deficit_p10_optimistic_mw,deficit_p90_worst_case_mw,deficit_bandwidth_mw,system_status,dispatch_advisory
+2026-09-11 00:00,0.0,0.0,0.0,0.0,0.0,100.0,-100.0,100.0,100.0,100.0,0.0,DEFICIT,Discharge BESS (+100.0 MW). Peak deficit risk: 100.0 MW
+2026-09-11 01:00,0.0,0.0,0.0,0.0,0.0,97.6,-97.6,97.6,97.6,97.6,0.0,DEFICIT,Discharge BESS (+97.6 MW). Peak deficit risk: 97.6 MW
+2026-09-11 02:00,0.0,13.13,13.13,12.01,13.34,95.3,-82.17,82.17,81.96,83.29,1.33,DEFICIT,Discharge BESS (+82.2 MW). Peak deficit risk: 83.3 MW
+2026-09-11 03:00,0.0,8.57,8.57,8.36,9.4,94.0,-85.43,85.43,84.6,85.64,1.04,DEFICIT,Discharge BESS (+85.4 MW). Peak deficit risk: 85.6 MW
+2026-09-11 04:00,0.0,10.59,10.59,10.04,11.16,92.9,-82.31,82.31,81.74,82.86,1.12,DEFICIT,Discharge BESS (+82.3 MW). Peak deficit risk: 82.9 MW
+2026-09-11 05:00,0.0,7.91,7.91,7.91,8.14,92.7,-84.79,84.79,84.56,84.79,0.23,DEFICIT,Discharge BESS (+84.8 MW). Peak deficit risk: 84.8 MW
+2026-09-11 06:00,0.0,8.05,8.05,7.94,8.31,112.9,-104.85,104.85,104.59,104.96,0.37,DEFICIT,Discharge BESS (+104.8 MW). Peak deficit risk: 105.0 MW
+2026-09-11 07:00,6.42,5.93,12.35,11.81,12.85,139.3,-126.95,126.95,126.45,127.49,1.04,DEFICIT,Discharge BESS (+127.0 MW). Peak deficit risk: 127.5 MW
+2026-09-11 08:00,26.3,1.13,27.43,26.93,31.35,160.8,-133.37,133.37,129.45,133.87,4.42,DEFICIT,Discharge BESS (+133.4 MW). Peak deficit risk: 133.9 MW
+2026-09-11 09:00,48.78,0.7,49.48,48.31,55.59,165.5,-116.02,116.02,109.91,117.19,7.28,DEFICIT,Discharge BESS (+116.0 MW). Peak deficit risk: 117.2 MW
+2026-09-11 10:00,68.32,0.94,69.26,69.18,73.0,159.0,-89.74,89.74,86.0,89.82,3.82,DEFICIT,Discharge BESS (+89.7 MW). Peak deficit risk: 89.8 MW
+2026-09-11 11:00,78.28,0.46,78.74,74.03,80.49,145.5,-66.76,66.76,65.01,71.47,6.46,DEFICIT,Discharge BESS (+66.8 MW). Peak deficit risk: 71.5 MW
+2026-09-11 12:00,86.81,0.37,87.18,74.04,88.05,151.2,-64.02,64.02,63.15,77.16,14.01,DEFICIT,Discharge BESS (+64.0 MW). Peak deficit risk: 77.2 MW
+2026-09-11 13:00,86.85,0.0,86.85,73.67,88.11,152.8,-65.95,65.95,64.69,79.13,14.44,DEFICIT,Discharge BESS (+66.0 MW). Peak deficit risk: 79.1 MW
+2026-09-11 14:00,81.83,0.0,81.83,73.38,82.57,150.5,-68.67,68.67,67.93,77.12,9.19,DEFICIT,Discharge BESS (+68.7 MW). Peak deficit risk: 77.1 MW
+2026-09-11 15:00,71.47,0.0,71.47,71.47,73.11,144.7,-73.23,73.23,71.59,73.23,1.64,DEFICIT,Discharge BESS (+73.2 MW). Peak deficit risk: 73.2 MW
+2026-09-11 16:00,54.57,0.0,54.57,54.57,62.17,137.7,-83.13,83.13,75.53,83.13,7.6,DEFICIT,Discharge BESS (+83.1 MW). Peak deficit risk: 83.1 MW
+2026-09-11 17:00,31.44,0.31,31.75,31.75,37.03,126.7,-94.95,94.95,89.67,94.95,5.28,DEFICIT,Discharge BESS (+95.0 MW). Peak deficit risk: 95.0 MW
+2026-09-11 18:00,9.53,0.18,9.71,9.71,14.25,135.9,-126.19,126.19,121.65,126.19,4.54,DEFICIT,Discharge BESS (+126.2 MW). Peak deficit risk: 126.2 MW
+2026-09-11 19:00,0.0,3.56,3.56,3.31,3.56,149.4,-145.84,145.84,145.84,146.09,0.25,DEFICIT,Discharge BESS (+145.8 MW). Peak deficit risk: 146.1 MW
+2026-09-11 20:00,0.0,9.03,9.03,8.4,9.03,153.3,-144.27,144.27,144.27,144.9,0.63,DEFICIT,Discharge BESS (+144.3 MW). Peak deficit risk: 144.9 MW
+2026-09-11 21:00,0.0,8.97,8.97,8.21,8.97,142.8,-133.83,133.83,133.83,134.59,0.76,DEFICIT,Discharge BESS (+133.8 MW). Peak deficit risk: 134.6 MW
+2026-09-11 22:00,0.0,8.92,8.92,8.3,8.96,124.1,-115.18,115.18,115.14,115.8,0.66,DEFICIT,Discharge BESS (+115.2 MW). Peak deficit risk: 115.8 MW
+2026-09-11 23:00,0.0,0.0,0.0,0.0,0.0,98.2,-98.2,98.2,98.2,98.2,0.0,DEFICIT,Discharge BESS (+98.2 MW). Peak deficit risk: 98.2 MW

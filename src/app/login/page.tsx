@@ -85,7 +85,7 @@ function LoginForm() {
           Control Room Access
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground font-display">
-          Sign in to RenewableIQ
+          Sign in to SURGE
         </h2>
         <p className="text-xs text-foreground-secondary leading-relaxed">
           Access the real-time renewable generation forecasting workbench, risk ledger, and battery dispatch recommendations.
@@ -230,11 +230,11 @@ export default function LoginPage() {
         <div className="relative z-10 space-y-8">
           {/* Brand Logo */}
           <Link href="/" className="inline-flex items-center gap-2.5 focus-ring rounded-md">
-            <div className="flex size-9 items-center justify-center rounded-md bg-primary-dark text-white shadow-xs">
-              <Zap className="size-4.5" />
+            <div className="flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0">
+              <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
             </div>
             <span className="font-display font-bold text-lg tracking-tight text-foreground">
-              Renewable<span className="text-primary">IQ</span>
+              SURGE
             </span>
           </Link>
 

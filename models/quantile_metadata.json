@@ -1,0 +1,94 @@
+{
+    "training_timestamp": "2026-09-12T14:34:38.387147",
+    "algorithm": "Multi-Quantile XGBoost (reg:quantileerror)",
+    "quantiles": [
+        0.1,
+        0.5,
+        0.9
+    ],
+    "solar": {
+        "model_file": "models/solar_quantile_best.joblib",
+        "features": [
+            "shortwave_radiation",
+            "direct_normal_irradiance",
+            "diffuse_radiation",
+            "temperature_2m",
+            "relative_humidity_2m",
+            "surface_pressure",
+            "cloud_cover",
+            "wind_speed_10m",
+            "solar_zenith",
+            "solar_azimuth",
+            "solar_elevation",
+            "clearsky_ghi",
+            "clearness_index",
+            "hour_sin",
+            "hour_cos",
+            "month_sin",
+            "month_cos",
+            "day_of_year_sin",
+            "day_of_year_cos",
+            "cloud_cover_rolling_3h",
+            "temp_rolling_3h"
+        ],
+        "capacity_mw": 100.0,
+        "train_samples": 7008,
+        "test_samples": 1752,
+        "metrics": {
+            "pinball_loss_p10": 0.2306,
+            "pinball_loss_p50": 0.3129,
+            "pinball_loss_p90": 0.2044,
+            "p10_p90_interval_coverage_pct": 83.16,
+            "median_p50_mae_mw": 0.626
+        },
+        "train_time_sec": 0.7
+    },
+    "wind": {
+        "model_file": "models/wind_quantile_best.joblib",
+        "features": [
+            "wind_speed_10m",
+            "wind_speed_100m",
+            "wind_gusts_10m",
+            "wind_dir_sin",
+            "wind_dir_cos",
+            "air_density",
+            "temperature_2m",
+            "surface_pressure",
+            "hour_sin",
+            "hour_cos",
+            "month_sin",
+            "month_cos",
+            "day_of_year_sin",
+            "day_of_year_cos",
+            "wind_speed_rolling_3h",
+            "wind_speed_rolling_6h"
+        ],
+        "capacity_mw": 100.0,
+        "train_samples": 7008,
+        "test_samples": 1752,
+        "metrics": {
+            "pinball_loss_p10": 0.2543,
+            "pinball_loss_p50": 1.162,
+            "pinball_loss_p90": 2.0375,
+            "p10_p90_interval_coverage_pct": 72.15,
+            "median_p50_mae_mw": 2.324
+        },
+        "train_time_sec": 0.68
+    },
+    "demand": {
+        "model_file": "models/demand_model.joblib",
+        "base_load_mw": 85.0,
+        "features": [
+            "hour",
+            "hour_sin",
+            "hour_cos",
+            "dayofweek",
+            "is_weekend",
+            "month",
+            "temperature_2m",
+            "cdd",
+            "hdd",
+            "temp_squared"
+        ]
+    }
+}

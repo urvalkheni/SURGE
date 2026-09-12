@@ -137,11 +137,11 @@ export default function LandingPage() {
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8 space-y-4">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="flex size-6 items-center justify-center rounded-sm bg-primary-dark text-white">
-                <Zap className="size-3.5" />
+              <div className="flex size-6 items-center justify-center rounded-sm overflow-hidden shrink-0">
+                <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
               </div>
               <span className="font-display font-bold text-sm tracking-tight text-foreground">
-                Renewable<span className="text-primary">IQ</span>
+                SURGE
               </span>
               <span className="text-xs text-muted font-mono ml-2">v1.0.0-prod</span>
             </div>
@@ -156,7 +156,7 @@ export default function LandingPage() {
 
           <div className="pt-4 border-t border-border-subtle flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted font-mono">
             <div>
-              © 2026 RenewableIQ Systems Inc. All simulation values generated deterministically for evaluation.
+              © 2026 SURGE Systems Inc. All simulation values generated deterministically for evaluation.
             </div>
             <div className="flex items-center gap-4 text-[11px] tabular-nums">
               <span>SCADA PROTOCOL: IEC 61850</span>
