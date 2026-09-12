@@ -1,0 +1,47 @@
+{
+  "krish.patel@sldc.gujarat.gov.in": {
+    "id": "usr-001",
+    "email": "krish.patel@sldc.gujarat.gov.in",
+    "name": "Krish Patel",
+    "password_hash": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+    "role": "Chief Grid Dispatcher",
+    "station": "Gujarat SLDC - Gotri, Vadodara",
+    "created_at": "2026-09-12T12:40:58.586355"
+  },
+  "operator@renewai.in": {
+    "id": "usr-002",
+    "email": "operator@renewai.in",
+    "name": "Khavda Shift Engineer",
+    "password_hash": "ec6e1c25258002eb1c67d15c7f45da7945fa4c58778fd7d88faa5e53e3b4698d",
+    "role": "Plant Operations Engineer",
+    "station": "Khavda 30GW Renewable Park",
+    "created_at": "2026-09-12T12:40:58.586363"
+  },
+  "pooja.sharma@sldc.rajasthan.gov.in": {
+    "id": "usr-d26a42cb",
+    "email": "pooja.sharma@sldc.rajasthan.gov.in",
+    "name": "Pooja Sharma",
+    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "role": "Plant Operations Engineer",
+    "station": "Rajasthan SLDC - Bhadla Solar Park",
+    "created_at": "2026-09-12T12:47:20.877336"
+  },
+  "test.operator@sldc.in": {
+    "id": "usr-55db77fc",
+    "email": "test.operator@sldc.in",
+    "name": "Test Operator",
+    "password_hash": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+    "role": "Grid Operator",
+    "station": "Gujarat SLDC",
+    "created_at": "2026-09-12T14:38:01.074472"
+  },
+  "sunil.mehta@sldc.gujarat.gov.in": {
+    "id": "usr-3b6ea87e",
+    "email": "sunil.mehta@sldc.gujarat.gov.in",
+    "name": "Sunil Mehta",
+    "password_hash": "mock_hash_12345",
+    "role": "Senior Dispatch Engineer",
+    "station": "Gujarat SLDC - Gotri",
+    "created_at": "2026-09-12T14:38:33.198420"
+  }
+}

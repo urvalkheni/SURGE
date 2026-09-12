@@ -54,17 +54,42 @@ WIND_FEATURES = [
 def engineer_wind_features(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
-    
+
+    # Wind speed at 100m fallback if only 10m is present
+    if "wind_speed_100m" not in df.columns:
+        if "wind_speed_10m" in df.columns:
+            df["wind_speed_100m"] = np.round(df["wind_speed_10m"] * ((100.0 / 10.0) ** 0.143), 2)
+        else:
+            df["wind_speed_100m"] = 6.0
+
+    if "wind_speed_10m" not in df.columns:
+        df["wind_speed_10m"] = np.round(df["wind_speed_100m"] / ((100.0 / 10.0) ** 0.143), 2)
+
+    if "wind_gusts_10m" not in df.columns:
+        df["wind_gusts_10m"] = np.round(df["wind_speed_10m"] * 1.35, 2)
+
     # Directional trigonometry
-    rad = np.deg2rad(df["wind_direction_100m"].values)
-    df["wind_dir_sin"] = np.round(np.sin(rad), 4)
-    df["wind_dir_cos"] = np.round(np.cos(rad), 4)
+    dir_col = "wind_direction_100m" if "wind_direction_100m" in df.columns else ("wind_direction_10m" if "wind_direction_10m" in df.columns else None)
+    if dir_col is not None:
+        rad = np.deg2rad(df[dir_col].values)
+        df["wind_dir_sin"] = np.round(np.sin(rad), 4)
+        df["wind_dir_cos"] = np.round(np.cos(rad), 4)
+    else:
+        df["wind_dir_sin"] = 0.5
+        df["wind_dir_cos"] = 0.866
 
     # Compute air density if not present
     if "air_density" not in df.columns:
-        temp_k = df["temperature_2m"].values + 273.15
-        p_pa = df["surface_pressure"].values * 100.0
+        temp_val = df["temperature_2m"].values if "temperature_2m" in df.columns else 25.0
+        press_val = df["surface_pressure"].values if "surface_pressure" in df.columns else 1013.25
+        temp_k = temp_val + 273.15
+        p_pa = press_val * 100.0
         df["air_density"] = np.round(p_pa / (287.058 * temp_k), 3)
+
+    if "temperature_2m" not in df.columns:
+        df["temperature_2m"] = 28.0
+    if "surface_pressure" not in df.columns:
+        df["surface_pressure"] = 1005.0
 
     # Cyclical time
     hour = df["timestamp"].dt.hour

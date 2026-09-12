@@ -15,15 +15,15 @@ export function LandingHeader() {
         {/* Brand Wordmark */}
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 focus-ring rounded-md">
-            <div className="flex size-8 items-center justify-center rounded-sm bg-primary-dark text-white shadow-subtle">
-              <Zap className="size-4" />
+            <div className="flex size-9 items-center justify-center rounded-md overflow-hidden shrink-0">
+              <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
             </div>
-            <span className="font-display font-bold text-base tracking-tight text-foreground">
-              Renewable<span className="text-primary">IQ</span>
+            <span className="font-display font-bold text-lg tracking-tight text-foreground">
+              SURGE
             </span>
           </Link>
           <span className="hidden lg:inline-block ml-2 text-xs text-foreground-secondary border-l border-border pl-3 font-medium">
-            AI Renewable Energy Forecasting & Grid Intelligence
+            Forecast the Grid. Before the Gap.
           </span>
         </div>
 

@@ -21,6 +21,7 @@ DEFAULT_END_DATE = "2023-12-31"
 
 ARCHIVE_API_URL = "https://archive-api.open-meteo.com/v1/archive"
 FORECAST_API_URL = "https://api.open-meteo.com/v1/forecast"
+ENSEMBLE_API_URL = "https://ensemble-api.open-meteo.com/v1/ensemble"
 
 HOURLY_VARIABLES = [
     "temperature_2m",
@@ -28,6 +29,7 @@ HOURLY_VARIABLES = [
     "surface_pressure",
     "cloud_cover",
     "wind_speed_10m",
+    "wind_speed_100m",
     "shortwave_radiation",       # GHI (Global Horizontal Irradiance) in W/m²
     "direct_normal_irradiance",  # DNI in W/m²
     "diffuse_radiation",         # DHI in W/m²
@@ -116,6 +118,51 @@ def fetch_weather_forecast(
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, index=False)
     logger.info(f"Successfully saved {len(df)} forecast records to {output_path}")
+    return df
+
+def fetch_ensemble_weather(
+    lat: float = DEFAULT_LATITUDE,
+    lon: float = DEFAULT_LONGITUDE,
+    variables: list = None,
+    models: str = "gfs025,ecmwf_ifs025,icon_seamless",
+    forecast_days: int = 3,
+    output_path: str = "data/raw/weather_ensemble.csv"
+) -> pd.DataFrame:
+    """
+    Downloads multi-model ensemble weather forecasts from Open-Meteo Ensemble API.
+    Captures genuine meteorological uncertainty/spread across numerical weather prediction (NWP) runs.
+    """
+    if variables is None:
+        variables = ["shortwave_radiation", "direct_radiation", "diffuse_radiation", "cloud_cover", "wind_speed_10m", "wind_speed_100m", "temperature_2m"]
+
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": ",".join(variables),
+        "models": models,
+        "forecast_days": forecast_days,
+        "timezone": "Asia/Kolkata"
+    }
+
+    logger.info(f"Requesting {forecast_days}-day ensemble forecast for models {models}...")
+    response = requests.get(ENSEMBLE_API_URL, params=params, timeout=30)
+
+    if response.status_code != 200:
+        logger.error(f"Failed to fetch ensemble forecast: HTTP {response.status_code} - {response.text}")
+        response.raise_for_status()
+
+    data = response.json()
+    hourly = data.get("hourly", {})
+    df = pd.DataFrame(hourly)
+    df.rename(columns={"time": "timestamp"}, inplace=True)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["latitude"] = lat
+    df["longitude"] = lon
+
+    if output_path:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        df.to_csv(output_path, index=False)
+        logger.info(f"Successfully saved {len(df)} ensemble forecast records to {output_path}")
     return df
 
 if __name__ == "__main__":

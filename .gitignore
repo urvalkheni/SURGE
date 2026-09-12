@@ -42,5 +42,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 
+# Local database
+*.db
+data/*.db
+
 # Local testing frontend (excluded from git upload)
 frontend/

@@ -11,6 +11,8 @@ Allows users to dynamically select:
 import os
 import json
 import time
+import hashlib
+import secrets
 from datetime import datetime
 from typing import Optional, List, Dict
 import requests
@@ -18,12 +20,17 @@ import pandas as pd
 import numpy as np
 import joblib
 import pvlib
+from pydantic import BaseModel
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from xgboost import XGBRegressor
 
 from src.prediction.predict import generate_forecast_features
 from src.wind.train_wind import engineer_wind_features
+from src.models.quantile_forecaster import SiteQuantileForecaster
+from src.models.demand_forecaster import DemandForecaster
+from src.prediction.deficit_engine import compute_probabilistic_deficit, slice_forward_window
+from db import db_create_user, db_get_user, db_log_dispatch, db_get_dispatch_history, get_db_inspection
 
 app = FastAPI(
     title="AI-Powered Renewable Generation Forecasting API (State, City & Area Level)",
@@ -63,6 +70,9 @@ PAN_INDIA_SOLAR_MODEL_PATH = "models/pan_india_solar_model.joblib"
 PAN_INDIA_WIND_MODEL_PATH = "models/pan_india_wind_model.joblib"
 DEFAULT_SOLAR_MODEL_PATH = "models/solar_forecast_best.joblib"
 DEFAULT_WIND_MODEL_PATH = "models/wind_forecast_best.joblib"
+SOLAR_QUANTILE_MODEL_PATH = "models/solar_quantile_best.joblib"
+WIND_QUANTILE_MODEL_PATH = "models/wind_quantile_best.joblib"
+DEMAND_MODEL_PATH = "models/demand_model.joblib"
 
 
 def _clean_param(val):
@@ -474,6 +484,12 @@ def get_dynamic_hybrid_forecast(
     hours: int = Query(default=72, ge=1, le=72),
     live: bool = Query(default=True, description="Fetch live real-time forecast from Open-Meteo")
 ):
+    hours = getattr(hours, "default", hours) if not isinstance(hours, int) else hours
+    live = getattr(live, "default", live) if not isinstance(live, bool) else live
+    state = getattr(state, "default", state) if not isinstance(state, (str, type(None))) else state
+    city = getattr(city, "default", city) if not isinstance(city, (str, type(None))) else city
+    area = getattr(area, "default", area) if not isinstance(area, (str, type(None))) else area
+
     cfg = get_state_city_area_config(state, city, area)
     s_key = cfg["state_key"]
     c_key = cfg["city_key"]
@@ -556,29 +572,77 @@ def get_dynamic_hybrid_forecast(
         solar_weather, wind_weather = synthesize_hyperlocal_weather(lat, lon, hours, cfg)
 
 
-    # 3. Solar Inference
+    # 3. Solar Inference with Quantile Bounds
     X_solar = generate_forecast_features(solar_weather, solar_meta["feature_columns"])
-    solar_preds = np.clip(solar_model.predict(X_solar), 0.0, 100.0)
-    solar_preds[X_solar["solar_elevation"] <= 0.0] = 0.0
-    solar_preds = np.round(solar_preds, 2)
+    if os.path.exists(SOLAR_QUANTILE_MODEL_PATH):
+        try:
+            solar_q_model = SiteQuantileForecaster.load(SOLAR_QUANTILE_MODEL_PATH)
+            solar_q = solar_q_model.predict_quantiles(X_solar)
+            solar_p10, solar_preds, solar_p90 = solar_q["p10"], solar_q["p50"], solar_q["p90"]
+            solar_model_source = f"{solar_model_source} + Site Quantile (P10/P50/P90)"
+        except Exception:
+            solar_preds = np.clip(solar_model.predict(X_solar), 0.0, 100.0)
+            solar_preds[X_solar["solar_elevation"] <= 0.0] = 0.0
+            solar_preds = np.round(solar_preds, 2)
+            solar_p10 = np.round(solar_preds * 0.85, 2)
+            solar_p90 = np.round(np.clip(solar_preds * 1.15, 0.0, 100.0), 2)
+    else:
+        solar_preds = np.clip(solar_model.predict(X_solar), 0.0, 100.0)
+        solar_preds[X_solar["solar_elevation"] <= 0.0] = 0.0
+        solar_preds = np.round(solar_preds, 2)
+        solar_p10 = np.round(solar_preds * 0.85, 2)
+        solar_p90 = np.round(np.clip(solar_preds * 1.15, 0.0, 100.0), 2)
 
-    # 4. Wind Inference
+    # 4. Wind Inference with Quantile Bounds
     wind_feat_df = engineer_wind_features(wind_weather)
     X_wind = wind_feat_df[wind_meta["feature_columns"]]
-    wind_preds = np.clip(wind_model.predict(X_wind), 0.0, 100.0)
-    wind_preds = np.round(wind_preds, 2)
+    if os.path.exists(WIND_QUANTILE_MODEL_PATH):
+        try:
+            wind_q_model = SiteQuantileForecaster.load(WIND_QUANTILE_MODEL_PATH)
+            wind_q = wind_q_model.predict_quantiles(X_wind)
+            wind_p10, wind_preds, wind_p90 = wind_q["p10"], wind_q["p50"], wind_q["p90"]
+            wind_model_source = f"{wind_model_source} + Site Quantile (P10/P50/P90)"
+        except Exception:
+            wind_preds = np.clip(wind_model.predict(X_wind), 0.0, 100.0)
+            wind_preds = np.round(wind_preds, 2)
+            wind_p10 = np.round(wind_preds * 0.85, 2)
+            wind_p90 = np.round(np.clip(wind_preds * 1.15, 0.0, 100.0), 2)
+    else:
+        wind_preds = np.clip(wind_model.predict(X_wind), 0.0, 100.0)
+        wind_preds = np.round(wind_preds, 2)
+        wind_p10 = np.round(wind_preds * 0.85, 2)
+        wind_p90 = np.round(np.clip(wind_preds * 1.15, 0.0, 100.0), 2)
 
     # 5. Hybrid Aggregation & Area Substation Demand
     timestamps = pd.to_datetime(solar_weather["timestamp"]).dt.strftime("%Y-%m-%d %H:%M")
     total_re = np.round(solar_preds + wind_preds, 2)
+    total_re_p10 = np.round(solar_p10 + wind_p10, 2)
+    total_re_p90 = np.round(solar_p90 + wind_p90, 2)
 
-    hrs = pd.to_datetime(solar_weather["timestamp"]).dt.hour
-    demand = base_demand + 35.0 * np.sin(np.pi * (hrs - 6) / 12).clip(0, 1) + 40.0 * np.sin(np.pi * (hrs - 18) / 6).clip(0, 1)
-    demand = np.round(demand, 1)
+    # Thermodynamic Demand Model or Baseline
+    if os.path.exists(DEMAND_MODEL_PATH):
+        try:
+            demand_model = DemandForecaster.load(DEMAND_MODEL_PATH)
+            demand = demand_model.predict(solar_weather)
+        except Exception:
+            hrs = pd.to_datetime(solar_weather["timestamp"]).dt.hour
+            demand = base_demand + 35.0 * np.sin(np.pi * (hrs - 6) / 12).clip(0, 1) + 40.0 * np.sin(np.pi * (hrs - 18) / 6).clip(0, 1)
+            demand = np.round(demand, 1)
+    else:
+        hrs = pd.to_datetime(solar_weather["timestamp"]).dt.hour
+        demand = base_demand + 35.0 * np.sin(np.pi * (hrs - 6) / 12).clip(0, 1) + 40.0 * np.sin(np.pi * (hrs - 18) / 6).clip(0, 1)
+        demand = np.round(demand, 1)
+
     delta = np.round(total_re - demand, 2)
+    deficit_p10 = np.round(demand - total_re_p90, 2)
+    deficit_p50 = np.round(demand - total_re, 2)
+    deficit_p90 = np.round(demand - total_re_p10, 2)
 
     schedule = []
-    for t, sol, wnd, tot, dem, d in zip(timestamps, solar_preds, wind_preds, total_re, demand, delta):
+    for t, sol, wnd, tot, dem, d, def_p10, def_p50, def_p90, tot_p10, tot_p90 in zip(
+        timestamps, solar_preds, wind_preds, total_re, demand, delta,
+        deficit_p10, deficit_p50, deficit_p90, total_re_p10, total_re_p90
+    ):
         if d > 15.0:
             st = "SURPLUS"
             adv = f"Charge BESS Battery (+{d:.1f} MW) / Export to Regional Grid"
@@ -596,6 +660,18 @@ def get_dynamic_hybrid_forecast(
             "total_renewable_mw": float(tot),
             "grid_demand_mw": float(dem),
             "grid_balance_mw": float(d),
+            "expected_deficit_mw": float(def_p50),
+            "generation_bounds": {
+                "p10_mw": float(tot_p10),
+                "p50_mw": float(tot),
+                "p90_mw": float(tot_p90)
+            },
+            "deficit_bounds": {
+                "p10_optimistic_mw": float(def_p10),
+                "p50_expected_mw": float(def_p50),
+                "p90_worst_case_mw": float(def_p90),
+                "bandwidth_mw": round(float(def_p90 - def_p10), 2)
+            },
             "system_status": st,
             "dispatch_advisory": adv
         })
@@ -619,10 +695,357 @@ def get_dynamic_hybrid_forecast(
         "wind_energy_mwh": round(float(sum(wind_preds)), 2),
         "total_energy_mwh": round(float(sum(total_re)), 2),
         "peak_output_mw": round(float(max(total_re)), 2),
+        "max_expected_deficit_mw": round(float(max(deficit_p50)), 2),
+        "peak_risk_p90_deficit_mw": round(float(max(deficit_p90)), 2),
         "solar_model_source": solar_model_source,
         "wind_model_source": wind_model_source,
         "hourly_schedule": schedule
     }
+
+@app.get("/forecast/deficit-ahead")
+def get_forward_deficit_ahead(
+    state: str = Query(default="rajasthan", description="Indian state"),
+    city: str = Query(default=None, description="City in the state"),
+    area: str = Query(default=None, description="Specific Area or Substation in the city"),
+    target_start_hour: int = Query(default=18, ge=0, le=23, description="Forward target start hour (e.g. 18 for 18:00)"),
+    target_end_hour: int = Query(default=22, ge=0, le=23, description="Forward target end hour (e.g. 22 for 22:00)"),
+    hours: int = Query(default=72, ge=1, le=72, description="Weather forecast horizon in hours"),
+    live: bool = Query(default=True, description="Fetch live forward forecast from Open-Meteo")
+):
+    """
+    Computes forward-looking Expected Renewable Deficit for a specific future window
+    (e.g., predicting 18:00–22:00 deficit while currently at 14:00) with genuine P10-P90
+    confidence intervals and BESS battery dispatch advisories.
+    """
+    hours = getattr(hours, "default", hours) if not isinstance(hours, int) else hours
+    target_start_hour = getattr(target_start_hour, "default", target_start_hour) if not isinstance(target_start_hour, int) else target_start_hour
+    target_end_hour = getattr(target_end_hour, "default", target_end_hour) if not isinstance(target_end_hour, int) else target_end_hour
+    live = getattr(live, "default", live) if not isinstance(live, bool) else live
+    state = getattr(state, "default", state) if not isinstance(state, (str, type(None))) else state
+    city = getattr(city, "default", city) if not isinstance(city, (str, type(None))) else city
+    area = getattr(area, "default", area) if not isinstance(area, (str, type(None))) else area
+
+    cfg = get_state_city_area_config(state, city, area)
+    lat = cfg["latitude"]
+    lon = cfg["longitude"]
+    forecast_days = max(1, (hours + 23) // 24)
+
+    # 1. Fetch forward-looking weather forecast
+    solar_weather = None
+    wind_weather = None
+    if live:
+        try:
+            solar_weather = fetch_live_weather_for_coords(lat, lon, SOLAR_VARIABLES, forecast_days).head(hours)
+            wind_weather = fetch_live_weather_for_coords(lat, lon, WIND_VARIABLES, forecast_days).head(hours)
+        except Exception:
+            solar_weather = None
+            wind_weather = None
+
+    if solar_weather is None or wind_weather is None or len(solar_weather) < hours:
+        solar_weather, wind_weather = synthesize_hyperlocal_weather(lat, lon, hours, cfg)
+
+    # 2. Engineer features
+    with open("models/model_metadata.json", "r") as f:
+        solar_meta = json.load(f)
+    with open("models/wind_metadata.json", "r") as f:
+        wind_meta = json.load(f)
+
+    X_solar = generate_forecast_features(solar_weather, solar_meta["feature_columns"])
+    # Combine engineered features with timestamp and weather for slicing
+    solar_combined = solar_weather.copy()
+    for col in X_solar.columns:
+        solar_combined[col] = X_solar[col].values
+
+    wind_feat_df = engineer_wind_features(wind_weather)
+
+    # 3. Slice forward window (e.g. 18:00 to 22:00)
+    now_dt = datetime.now()
+    sliced_solar = slice_forward_window(solar_combined, target_start_hour, target_end_hour, now_dt)
+    sliced_wind = slice_forward_window(wind_feat_df, target_start_hour, target_end_hour, now_dt)
+
+    if len(sliced_solar) == 0:
+        sliced_solar = solar_combined.head(5).reset_index(drop=True)
+        sliced_wind = wind_feat_df.head(5).reset_index(drop=True)
+
+    # 4. Load Models
+    if os.path.exists(SOLAR_QUANTILE_MODEL_PATH):
+        solar_forecaster = SiteQuantileForecaster.load(SOLAR_QUANTILE_MODEL_PATH)
+    else:
+        # Fallback wrapper
+        base_m = joblib.load(DEFAULT_SOLAR_MODEL_PATH)
+        solar_forecaster = SiteQuantileForecaster(target_type="solar", max_capacity_mw=100.0, feature_columns=solar_meta["feature_columns"])
+        solar_forecaster.models = {"p10": base_m, "p50": base_m, "p90": base_m}
+
+    if os.path.exists(WIND_QUANTILE_MODEL_PATH):
+        wind_forecaster = SiteQuantileForecaster.load(WIND_QUANTILE_MODEL_PATH)
+    else:
+        base_w = joblib.load(DEFAULT_WIND_MODEL_PATH)
+        wind_forecaster = SiteQuantileForecaster(target_type="wind", max_capacity_mw=100.0, feature_columns=wind_meta["feature_columns"])
+        wind_forecaster.models = {"p10": base_w, "p50": base_w, "p90": base_w}
+
+    if os.path.exists(DEMAND_MODEL_PATH):
+        demand_forecaster = DemandForecaster.load(DEMAND_MODEL_PATH)
+    else:
+        demand_forecaster = DemandForecaster(base_load_mw=cfg.get("demand_baseline_mw", 85.0))
+        demand_forecaster.fit(solar_weather)
+
+    # 5. Compute Probabilistic Deficit
+    # Predict generation quantiles on the sliced forward window
+    sol_q = solar_forecaster.predict_quantiles(sliced_solar)
+    wnd_q = wind_forecaster.predict_quantiles(sliced_wind)
+
+    gen_p10 = np.round(sol_q["p10"] + wnd_q["p10"], 2)
+    gen_p50 = np.round(sol_q["p50"] + wnd_q["p50"], 2)
+    gen_p90 = np.round(sol_q["p90"] + wnd_q["p90"], 2)
+
+    dem_pred = demand_forecaster.predict(sliced_solar)
+
+    # Deficit = Demand - Generation. Inverted quantiles:
+    def_p10 = np.round(dem_pred - gen_p90, 2)
+    def_p50 = np.round(dem_pred - gen_p50, 2)
+    def_p90 = np.round(dem_pred - gen_p10, 2)
+    bandwidth = np.round(def_p90 - def_p10, 2)
+
+    timestamps = pd.to_datetime(sliced_solar["timestamp"]).dt.strftime("%Y-%m-%d %H:%M").tolist()
+    records = []
+    for i in range(len(timestamps)):
+        t = timestamps[i]
+        d_p50 = float(def_p50[i])
+        d_p10 = float(def_p10[i])
+        d_p90 = float(def_p90[i])
+        bw = float(bandwidth[i])
+
+        if d_p50 > 15.0:
+            st = "DEFICIT"
+            adv = f"Discharge BESS (+{d_p50:.1f} MW). Peak deficit risk: {d_p90:.1f} MW"
+        elif d_p50 < -15.0:
+            st = "SURPLUS"
+            adv = f"Charge BESS ({-d_p50:.1f} MW) / Export to Regional Grid"
+        else:
+            st = "BALANCED"
+            adv = "Optimal Local Grid Balance (Within ±15 MW)"
+
+        records.append({
+            "timestamp": t,
+            "grid_demand_mw": float(dem_pred[i]),
+            "total_renewable_mw": float(gen_p50[i]),
+            "solar_generation_mw": float(sol_q["p50"][i]),
+            "wind_generation_mw": float(wnd_q["p50"][i]),
+            "expected_deficit_mw": d_p50,
+            "generation_bounds": {
+                "p10_pessimistic_mw": float(gen_p10[i]),
+                "p50_expected_mw": float(gen_p50[i]),
+                "p90_optimistic_mw": float(gen_p90[i])
+            },
+            "deficit_bounds": {
+                "p10_optimistic_mw": d_p10,
+                "p50_expected_mw": d_p50,
+                "p90_worst_case_mw": d_p90,
+                "bandwidth_mw": bw
+            },
+            "uncertainty_status": "HIGH_SPREAD" if bw > 25.0 else "NORMAL_SPREAD",
+            "system_status": st,
+            "dispatch_advisory": adv
+        })
+
+    return {
+        "status": "success",
+        "reference_time": now_dt.strftime("%Y-%m-%d %H:%M"),
+        "target_window": f"{target_start_hour:02d}:00 - {target_end_hour:02d}:00",
+        "location": f"{cfg['state_name']} - {cfg['city_name']} ({cfg['area_name']})",
+        "coordinates": {"latitude": lat, "longitude": lon},
+        "solar_park": cfg["solar_park"],
+        "wind_park": cfg["wind_park"],
+        "summary": {
+            "window_hours": len(records),
+            "max_expected_deficit_mw": round(float(np.max(def_p50)), 2),
+            "peak_risk_p90_deficit_mw": round(float(np.max(def_p90)), 2),
+            "average_confidence_bandwidth_mw": round(float(np.mean(bandwidth)), 2)
+        },
+        "hourly_schedule": records
+    }
+
+# -------------------------------------------------------------------------
+# AUTHENTICATION & DISPATCH AUDIT LOGS STORAGE & ENDPOINTS
+# -------------------------------------------------------------------------
+DATA_DIR = "data"
+os.makedirs(DATA_DIR, exist_ok=True)
+USERS_FILE = os.path.join(DATA_DIR, "users.json")
+DISPATCH_FILE = os.path.join(DATA_DIR, "dispatch_logs.json")
+
+def hash_pw(pw: str) -> str:
+    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+
+def _init_storage():
+    if not os.path.exists(USERS_FILE):
+        default_users = {
+            "krish.patel@sldc.gujarat.gov.in": {
+                "id": "usr-001",
+                "name": "Krish Patel",
+                "email": "krish.patel@sldc.gujarat.gov.in",
+                "password_hash": hash_pw("admin123"),
+                "role": "Chief Grid Dispatcher",
+                "station": "Gujarat SLDC - Gotri, Vadodara",
+                "created_at": datetime.now().isoformat()
+            },
+            "operator@renewai.in": {
+                "id": "usr-002",
+                "name": "Khavda Shift Engineer",
+                "email": "operator@renewai.in",
+                "password_hash": hash_pw("operator123"),
+                "role": "Plant Operations Engineer",
+                "station": "Khavda 30GW Renewable Park",
+                "created_at": datetime.now().isoformat()
+            }
+        }
+        with open(USERS_FILE, "w") as f:
+            json.dump(default_users, f, indent=2)
+
+    if not os.path.exists(DISPATCH_FILE):
+        default_logs = [
+            {
+                "id": "dsp-101",
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "action_type": "BESS_CHARGE",
+                "magnitude_mw": 20.0,
+                "target_facility": "Charanka 50MWh BESS Phase 1",
+                "operator_name": "Krish Patel",
+                "status": "EXECUTED",
+                "rationale": "Absorb peak solar surplus to prevent feeder overload",
+                "financial_savings_inr": 84000,
+                "co2_avoided_kg": 16400
+            },
+            {
+                "id": "dsp-102",
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "action_type": "BESS_DISCHARGE",
+                "magnitude_mw": 33.4,
+                "target_facility": "Khavda BESS Array 2",
+                "operator_name": "Krish Patel",
+                "status": "EXECUTED",
+                "rationale": "Peak shaving during evening solar ramp-down",
+                "financial_savings_inr": 180360,
+                "co2_avoided_kg": 28390
+            }
+        ]
+        with open(DISPATCH_FILE, "w") as f:
+            json.dump(default_logs, f, indent=2)
+
+_init_storage()
+
+class UserSignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+    role: Optional[str] = "Grid Operator"
+    station: Optional[str] = "Gujarat SLDC"
+
+class UserLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class DispatchRequest(BaseModel):
+    action_type: str
+    magnitude_mw: float
+    target_facility: str
+    operator_name: Optional[str] = "Krish Patel"
+    rationale: Optional[str] = "Manual operator dispatch approval"
+    financial_savings_inr: Optional[int] = 50000
+    co2_avoided_kg: Optional[float] = 12000.0
+
+@app.post("/auth/signup")
+def signup_user(req: UserSignupRequest):
+    email = req.email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address provided.")
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+
+    # Check if operator already exists in database
+    existing_user = db_get_user(email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="An operator with this email is already registered.")
+
+    # Insert operator into SQL profiles table
+    created_user = db_create_user(
+        name=req.name.strip(),
+        email=email,
+        password_hash=hash_pw(req.password),
+        role=req.role or "Grid Operator",
+        station=req.station or "National Load Despatch Centre"
+    )
+
+    return {
+        "status": "success",
+        "message": f"Welcome, Operator {created_user['name']}! Account stored in database successfully.",
+        "user": {
+            "id": created_user["id"],
+            "name": created_user["name"],
+            "email": created_user["email"],
+            "role": created_user["role"],
+            "station": created_user["station"]
+        },
+        "token": f"jwt_{secrets.token_urlsafe(24)}"
+    }
+
+@app.post("/auth/login")
+def login_user(req: UserLoginRequest):
+    email = req.email.strip().lower()
+    
+    # Query operator from SQL profiles table
+    user = db_get_user(email)
+    if not user:
+        raise HTTPException(status_code=401, detail="No registered operator account found in database with this email.")
+
+    if user["password_hash"] != hash_pw(req.password):
+        raise HTTPException(status_code=401, detail="Incorrect password. Please verify your credentials.")
+
+    return {
+        "status": "success",
+        "message": f"Authenticated successfully as {user['name']}.",
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"],
+            "station": user["station"]
+        },
+        "token": f"jwt_{secrets.token_urlsafe(24)}"
+    }
+
+@app.get("/dispatch/history")
+def get_dispatch_history():
+    logs = db_get_dispatch_history()
+    return {"status": "success", "total_events": len(logs), "logs": logs}
+
+@app.post("/dispatch/execute")
+def execute_dispatch(req: DispatchRequest):
+    new_event = {
+        "id": f"dsp-{secrets.token_hex(3)}",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "action_type": req.action_type,
+        "magnitude_mw": round(float(req.magnitude_mw), 1),
+        "target_facility": req.target_facility,
+        "operator_name": req.operator_name,
+        "status": "EXECUTED",
+        "rationale": req.rationale,
+        "financial_savings_inr": req.financial_savings_inr or 45000,
+        "co2_avoided_kg": req.co2_avoided_kg or 9800.0
+    }
+
+    # Store dispatch event in SQL dispatch_actions table
+    saved_event = db_log_dispatch(new_event)
+
+    return {
+        "status": "success",
+        "message": f"Action [{req.action_type}] executed and stored in database by {req.operator_name}!",
+        "event": saved_event
+    }
+
+@app.get("/api/db/inspect")
+def inspect_database():
+    """Inspects database tables, schema, record counts, and recent entries."""
+    return get_db_inspection()
 
 if __name__ == "__main__":
     import uvicorn
