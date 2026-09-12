@@ -1,6 +1,6 @@
 /**
- * RenewableIQ API Contract & Types
- * Defines the contract boundary between Next.js frontend and external ML/FastAPI backend.
+ * SURGE API Contract & Types — 6-Layer MVP Pipeline
+ * Defines the contract boundary between Next.js frontend and FastAPI backend.
  */
 
 export interface ApiResponse<T> {
@@ -26,29 +26,68 @@ export interface ServiceResult<T> {
 }
 
 // -----------------------------------------------------------------------------
-// Forecast Service Contracts
+// Layer 0: Data Trust Contracts
+// -----------------------------------------------------------------------------
+
+export type DataTrustStatus = 'TRUSTED' | 'WARNING' | 'QUARANTINED' | 'HEALTHY';
+
+export interface DataTrustAnomaly {
+  type: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  observed_value?: Record<string, unknown>;
+  expected_value?: Record<string, unknown>;
+  description?: string;
+  status: string;
+  detected_at: string;
+}
+
+export interface DataTrustReport {
+  overall_status: DataTrustStatus;
+  source_status: 'TRUSTED' | 'QUARANTINED';
+  checks: {
+    range: boolean;
+    timestamp: boolean;
+    physical: boolean;
+    anomaly: boolean;
+    integrity: boolean;
+  };
+  reason: string;
+  fallback_used: boolean;
+  fallback_type?: string | null;
+  anomalies: DataTrustAnomaly[];
+  quarantine_count: number;
+  simulated_anomaly: boolean;
+  checked_at: string;
+}
+
+// -----------------------------------------------------------------------------
+// Layer 1 & 2: Forecast & Quantified Uncertainty Contracts
 // -----------------------------------------------------------------------------
 
 export interface ForecastRequest {
   plant_id: string;
-  horizon_hours: number; // 24, 48, or 72
-  resolution: '15m' | '1h';
-  latitude?: number;
-  longitude?: number;
-  capacity_mw?: number;
+  horizon_hours: 24 | 48 | 72;
+  resolution?: '15m' | '1h';
+  simulate_sensor_anomaly?: boolean;
 }
 
 export interface ForecastDataPoint {
   timestamp: string; // ISO 8601
-  actual_mw: number | null;
+  actual_mw?: number | null;
+  predicted_generation_mw?: number;
   predicted_mw: number;
+  lower_bound_mw: number;
+  upper_bound_mw: number;
   p10_mw: number;
+  p50_mw: number;
   p90_mw: number;
-  day_ahead_mw: number;
-  ghi: number;
-  cloud_cover_percent: number;
-  temperature_c: number;
-  wind_speed_ms?: number;
+  day_ahead_mw?: number;
+  confidence_score?: number;
+  risk_level?: 'HIGH' | 'MEDIUM' | 'LOW';
+  ghi?: number | null;
+  cloud_cover_percent?: number | null;
+  temperature_c?: number | null;
+  wind_speed_ms?: number | null;
   ramp_rate_mw_per_min?: number;
   is_ramp_alert?: boolean;
 }
@@ -61,100 +100,120 @@ export interface ForecastAccuracyMetrics {
   bias_mw: number;
 }
 
-export interface ForecastResponse {
-  plant_id: string;
-  model: string;
-  generated_at: string;
-  horizon_hours: number;
-  resolution: string;
-  forecast: ForecastDataPoint[];
-  metrics: ForecastAccuracyMetrics;
-  confidence: number;
+// -----------------------------------------------------------------------------
+// Layer 4: Explainability Contracts
+// -----------------------------------------------------------------------------
+
+export interface DriverDetail {
+  name: string;
+  impact: string;
+  value: string;
+  direction: 'UP' | 'DOWN' | 'FLAT';
+}
+
+export interface DriverBreakdown {
+  primary_driver: string;
+  summary: string;
+  target_risk_id?: string | null;
+  drivers: DriverDetail[];
 }
 
 // -----------------------------------------------------------------------------
-// Risk Service Contracts
+// Layer 3: Risk Contracts
 // -----------------------------------------------------------------------------
-
-export interface RiskRequest {
-  plant_id: string;
-  horizon_hours?: number;
-}
 
 export interface RiskItem {
   id: string;
-  category: string;
-  severity: string;
-  headline: string;
+  forecast_run_id?: string;
+  plant_id: string;
+  risk_type: 'RAMP' | 'UNCERTAINTY' | 'SURPLUS' | 'DEFICIT' | 'DATA_QUALITY';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  start_time: string;
+  end_time?: string | null;
+  title: string;
   description: string;
-  time_window: string;
-  lead_time_minutes: number;
-  magnitude: string;
-  grid_impact: string;
-  action_id: string;
-  status: string;
-  root_cause?: string;
-  penalty_exposure_inr?: string;
-}
-
-export interface RiskResponse {
-  plant_id: string;
-  active_risk_count: number;
-  total_events: number;
-  composite_risk_score: number;
-  max_projected_ramp: string;
-  identified_at: string;
-  risks: RiskItem[];
+  delta_mw_per_hour?: number;
+  energy_gap_mwh?: number;
+  confidence_score?: number;
+  lead_time_minutes?: number;
+  magnitude?: string;
+  grid_impact?: string;
+  action_id?: string;
+  status?: string;
 }
 
 // -----------------------------------------------------------------------------
-// Recommendation Service Contracts
+// Layer 5: Decision & Recommendation Contracts
 // -----------------------------------------------------------------------------
-
-export interface RecommendationRequest {
-  plant_id: string;
-  risk_id?: string;
-}
 
 export interface RecommendationItem {
   id: string;
-  target_risk_id: string;
-  priority: string;
-  title: string;
-  prescribed_action: string;
-  target_asset: string;
-  setpoint_mw: number;
-  target_window: string;
-  dispatch_duration_minutes: number;
-  net_effect: string;
-  confidence_percent: number;
-  financial_impact: string;
-  status: string;
-}
-
-export interface RecommendationResponse {
+  forecast_run_id?: string;
   plant_id: string;
-  recommendations: RecommendationItem[];
+  risk_id?: string | null;
+  action_type: string;
+  title: string;
+  reason?: string;
+  expected_impact_mw?: number;
+  energy_gap_mwh?: number;
+  time_window?: string;
+  confidence_score?: number;
+  status: 'PENDING' | 'APPROVED' | 'OVERRIDDEN' | 'REJECTED' | 'ACKNOWLEDGED';
+  priority?: 'HIGH' | 'MEDIUM' | 'LOW';
+  override_reason?: string | null;
+  decided_by?: string | null;
+  decided_at?: string | null;
+  // Legacy UI compat fields
+  prescribed_action?: string;
+  target_asset?: string;
+  setpoint_mw?: number;
+  target_window?: string;
+  dispatch_duration_minutes?: number;
+  net_effect?: string;
+  confidence_percent?: number;
+  financial_impact?: string;
+}
+
+export interface RecommendationDecisionPayload {
+  decision: 'APPROVED' | 'OVERRIDDEN' | 'REJECTED' | 'ACKNOWLEDGED';
+  override_reason?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  user_id?: string | null;
+  organization_id?: string | null;
+  plant_id?: string | null;
+  event_type: string;
+  entity_type: string;
+  entity_id?: string | null;
+  metadata?: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface ForecastResponse {
+  forecast_run_id: string;
+  plant_id: string;
+  model_name?: string;
+  model?: string;
   generated_at: string;
+  horizon_hours: number;
+  resolution?: string;
+  confidence_score: number;
+  confidence?: number;
+  confidence_level?: 'HIGH' | 'MEDIUM' | 'LOW';
+  explanation?: string;
+  data_trust: DataTrustReport;
+  driver_breakdown: DriverBreakdown;
+  points: ForecastDataPoint[];
+  forecast?: ForecastDataPoint[];
+  risks: RiskItem[];
+  recommendations: RecommendationItem[];
+  metrics?: ForecastAccuracyMetrics;
 }
 
 // -----------------------------------------------------------------------------
-// Health Check Contract
-// -----------------------------------------------------------------------------
-
-export interface HealthResponse {
-  status: 'ok' | 'degraded' | 'error';
-  version: string;
-  timestamp: string;
-  services: {
-    scada_bus: 'online' | 'offline';
-    nwp_assimilation: 'online' | 'offline';
-    inference_worker: 'online' | 'offline';
-  };
-}
-
-// -----------------------------------------------------------------------------
-// SURGE operational API contracts
+// Plant & Admin Models
 // -----------------------------------------------------------------------------
 
 export type SurgeRole = 'ORG_ADMIN' | 'GRID_OPERATOR' | 'PLANT_OPERATOR' | 'ENERGY_ANALYST';
@@ -175,18 +234,6 @@ export interface Plant {
   configuration: Record<string, unknown>;
 }
 
-export interface PlantInput {
-  organization_id: string;
-  name: string;
-  energy_type: PlantEnergyType;
-  latitude: number;
-  longitude: number;
-  capacity_mw: number;
-  location_name?: string;
-  timezone?: string;
-  configuration?: Record<string, unknown>;
-}
-
 export interface LocationSearchResult {
   name: string;
   country: string | null;
@@ -205,7 +252,7 @@ export interface WeatherData {
 
 export interface DataTrustResult {
   plant_id: string | null;
-  overall_status: 'HEALTHY' | 'WARNING' | 'QUARANTINED';
+  overall_status: DataTrustStatus;
   validation_runs: Array<Record<string, unknown>>;
   anomalies: Array<Record<string, unknown>>;
 }

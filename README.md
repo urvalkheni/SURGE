@@ -14,11 +14,11 @@ Utility-scale solar and wind generation are physically constrained by atmospheri
 
 ## 2. Core Architecture & Tech Stack
 
-* **Framework:** Next.js 15+ (React 19, App Router, React Server Components)
-* **Language:** TypeScript 5.x (Strict Mode enabled)
-* **Styling & Design System:** Tailwind CSS 3.4+ with custom industrial energy-tech tokens
+* **Framework:** Vite + React 19
+* **Language:** JavaScript/JSX
+* **Styling & Design System:** Tailwind CSS 4 with custom industrial energy-tech tokens
 * **Typography:** Manrope (Display/Headings) + Inter (UI/Body) with OpenType tabular lining numerals (`tabular-nums`)
-* **Motion & Animation:** Modern Motion (`motion/react`) for UI transitions + GSAP 3.x for pinned scroll narratives
+* **Motion & Animation:** React UI transitions with dashboard interaction components
 * **Charting Engine:** Recharts (composable SVG time-series visualizations)
 * **Icons:** Lucide React (`strokeWidth: 1.75px`)
 * **Component Primitives:** Custom accessible UI layer built on Radix UI primitives (`@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`)
@@ -53,19 +53,16 @@ Utility-scale solar and wind generation are physically constrained by atmospheri
 │   ├── 19_REPOSITORY_AUDIT.md           # Baseline technical inspection
 │   └── 20_FOUNDATION_VALIDATION.md      # Phase 1 engineering verification
 │
-├── src/
-│   ├── animations/                      # Motion & GSAP presets (`motion/react`)
-│   ├── app/                             # Next.js App Router (`layout.tsx`, `page.tsx`)
-│   ├── components/
-│   │   ├── ui/                          # Foundational primitives (Button, Card, Badge...)
-│   │   └── feedback/                    # Skeletons, empty states, error states, demo badge
-│   ├── config/                          # Centralized design tokens & navigation
-│   ├── data/                            # Deterministic 72h procedural demo data
-│   ├── hooks/                           # Custom React hooks (e.g. useReducedMotion)
-│   ├── lib/                             # Utility helpers & engineering formatters
-│   ├── providers/                       # ThemeProvider & app providers
-│   ├── services/                        # Typed API client & domain service layer
-│   └── types/                           # Explicit TypeScript domain contracts
+├── frontend/
+│   ├── src/
+│   │   ├── components/                  # Dashboard, command, chart, and layout components
+│   │   ├── pages/                       # React Router application pages
+│   │   ├── services/                    # Frontend API client and fallback data
+│   │   └── context/                     # Auth and application state providers
+│   ├── package.json                     # Vite frontend scripts
+│   └── .env                             # Local API and Supabase settings
+├── app.py                               # FastAPI API used by the Vite frontend
+├── backend/                             # Separate authenticated API service
 ```
 
 ---
@@ -75,38 +72,38 @@ Utility-scale solar and wind generation are physically constrained by atmospheri
 ### 4.1 Prerequisites
 * Node.js `>= 20.0.0`
 * npm `>= 10.0.0`
+* Python `>= 3.11`
 
 ### 4.2 Installation
 ```bash
-# Install justified dependencies
+# Install frontend dependencies
+cd frontend
 npm install
 ```
 
 ### 4.3 Environment Configuration
-Copy `.env.example` to `.env.local`:
+The Vite frontend reads `frontend/.env`:
 ```bash
-cp .env.example .env.local
+cp frontend/.env.example frontend/.env
 ```
 
 | Variable | Description | Default |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_API_URL` | Base URL for FastAPI/ML backend | `http://localhost:8000` |
-| `NEXT_PUBLIC_FORCE_DEMO_MODE` | Force fallback to deterministic mock data | `false` |
-| `NEXT_PUBLIC_DEFAULT_PLANT_ID` | Default plant asset for initial load | `desert-sun-04` |
+| `VITE_API_URL` | Base URL for the FastAPI forecasting backend | `http://127.0.0.1:8000` |
+| `VITE_SUPABASE_URL` | Supabase project URL | configured in `frontend/.env` |
 
 ### 4.4 Development Scripts
 ```bash
-# Run local development server
+cd frontend
+# Run the Vite development server
 npm run dev
 
-# Run strict TypeScript validation
-npx tsc --noEmit
-
-# Run production build
+# Build the frontend
 npm run build
 
-# Start production server
-npm run start
+# In another terminal, run the backend
+cd ..
+backend/.venv/bin/python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ---
