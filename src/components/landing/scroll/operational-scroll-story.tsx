@@ -88,7 +88,7 @@ const narrativeSteps: StepDefinition[] = [
     subtitle: 'Commercial Outcome',
     question: 'What does that decision achieve?',
     description:
-      'Closing the loop between environmental uncertainty and battery dispatch preserves interconnection agreements, stabilizes grid frequency, and eliminates costly balancing settlement penalties ($18,400 per major event).',
+      'Closing the loop between environmental uncertainty and battery dispatch preserves interconnection agreements, stabilizes grid frequency, and eliminates costly balancing settlement penalties (₹1,50,000 per major event).',
     icon: CheckCircle2,
     tag: 'MEASURED VALUE',
     routeHref: '/dashboard',

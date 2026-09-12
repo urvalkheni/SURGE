@@ -3,8 +3,10 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Cpu, Activity, Clock } from 'lucide-react';
+import { Download, Cpu, Activity } from 'lucide-react';
 import { exportForecastCsv, HourlyWorkbenchPoint } from '@/data/demo-data';
+
+import { usePlant } from '@/contexts/plant-context';
 
 export interface ForecastWorkbenchHeaderProps {
   horizon: '24h' | '48h' | '72h';
@@ -21,16 +23,30 @@ export function ForecastWorkbenchHeader({
   onResolutionChange,
   exportPoints,
 }: ForecastWorkbenchHeaderProps) {
+  const { plant, configuration } = usePlant();
   const [isExporting, setIsExporting] = React.useState(false);
 
   const handleExport = () => {
     setIsExporting(true);
     try {
-      exportForecastCsv(exportPoints);
+      exportForecastCsv(exportPoints, {
+        plantName: plant?.name || 'Renewable Plant',
+        resolution,
+        horizon,
+        weatherSource: 'OPEN_METEO_LIVE',
+        forecastSource: 'PHYSICS_BASELINE',
+      });
     } finally {
       setTimeout(() => setIsExporting(false), 600);
     }
   };
+
+  const plantName = plant?.name || 'Ahmedabad Solar Plant';
+  const acCap = configuration?.acCapacityMw ?? 42.0;
+  const dcCap = configuration?.dcCapacityMw ?? 50.0;
+  const gridNode = configuration?.gridOperator 
+    ? `${configuration.gridOperator} ${configuration.gridVoltageKv}kV Node` 
+    : 'GETCO 220kV Node';
 
   return (
     <div className="flex flex-col gap-4 border-b border-border pb-5 mb-6">
@@ -47,16 +63,13 @@ export function ForecastWorkbenchHeader({
             </Badge>
             <span className="text-muted">·</span>
             <div
-              className="inline-flex items-center gap-1.5 text-xs text-primary-dark font-medium bg-[#EBF5EE] px-2 py-0.5 rounded-sm border border-[#BCE3CA]"
-              title="SCADA Simulated Telemetry feed"
+              className="inline-flex items-center gap-1.5 text-xs text-foreground-secondary font-medium bg-[#F3F4F6] px-2 py-0.5 rounded-sm border border-border"
+              title="Live plant SCADA telemetry is not connected"
             >
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-primary" />
-              </span>
-              <Activity className="size-3 text-primary" />
-              <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">
-                SCADA SIMULATED <span className="text-foreground-secondary lowercase font-normal">· 18ms</span>
+              <span className="size-2 rounded-full bg-muted-foreground/50" />
+              <Activity className="size-3 text-muted-foreground" />
+              <span className="font-mono text-[11px] uppercase tracking-wider font-semibold text-foreground-secondary">
+                SCADA: NOT CONNECTED
               </span>
             </div>
           </div>
@@ -65,7 +78,7 @@ export function ForecastWorkbenchHeader({
             72-Hour Forecast Workbench
           </h1>
           <p className="text-xs sm:text-sm text-foreground-secondary mt-1">
-            Ahmedabad Solar Plant · 42 MW AC / 50 MW DC · GETCO 220kV Node · High-resolution ensemble time-series
+            {plantName} · {acCap.toFixed(1)} MW AC / {dcCap.toFixed(1)} MW DC · {gridNode} · Continuous Physics Baseline
           </p>
         </div>
 
@@ -73,12 +86,9 @@ export function ForecastWorkbenchHeader({
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md border border-border-subtle bg-[#F7F9F6] text-xs font-mono text-foreground-secondary">
             <Cpu className="size-3.5 text-primary" />
-            <span>Ensemble GBDT + NWP v3.2</span>
+            <span>PHYSICS BASELINE</span>
             <span className="text-muted">|</span>
-            <span className="flex items-center gap-1">
-              <Clock className="size-3 text-muted" />
-              Run: 11:45 IST
-            </span>
+            <span className="text-amber-700 font-semibold">ML: NOT CONNECTED</span>
           </div>
 
           <Button

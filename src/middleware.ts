@@ -13,6 +13,8 @@ export const config = {
     '/plant/:path*',
     '/settings/:path*',
     '/profile/:path*',
+    '/onboarding/:path*',
     '/login',
+    '/signup',
   ],
 };

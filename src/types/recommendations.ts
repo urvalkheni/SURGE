@@ -30,13 +30,21 @@ export interface Recommendation {
   type: ActionType;
   priority: 'urgent' | 'standard' | 'routine';
   
-  // Strict 4-part mental model:
-  // Risk -> Root Cause -> Prescribed Action -> Expected Impact
+  // 5-part explanation model:
+  // WHY -> ACTION -> EXPECTED EFFECT -> CONSTRAINT -> SOURCE
+  why?: string;
+  action?: string;
+  expectedEffect?: string;
+  constraint?: string;
+  source?: string;
+
+  // Mental model: Risk -> Root Cause -> Prescribed Action -> Expected Impact
   riskSummary: string;
   rootCause: string;
   prescribedAction: string;
   expectedImpact: string;
 
+  estimatedSavingsInr?: number;
   estimatedSavingsUsd: number;
   frequencyProtectionScore: number; // 0 - 100
   dispatchPlan: DispatchAction;

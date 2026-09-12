@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { ShieldAlert, ArrowRight, DollarSign, Activity, Zap } from 'lucide-react';
+import { ShieldAlert, ArrowRight, Activity, Zap } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -93,7 +93,7 @@ export function ImpactSection() {
                 04. MEASURED IMPACT
               </div>
               <h4 className="font-display font-bold text-sm text-foreground">
-                $18,400 Penalty Avoided
+                ₹1,50,000 Penalty Avoided
               </h4>
               <p className="text-xs text-foreground-secondary leading-relaxed">
                 Maintains scheduled day-ahead market commitment and protects grid interconnect frequency stability.
@@ -107,16 +107,16 @@ export function ImpactSection() {
           <Card className="border-border bg-surface">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
-                <DollarSign className="size-5 text-primary" />
+                <span className="font-mono text-base font-bold text-primary">₹</span>
                 <Badge variant="outline" className="text-[10px] font-mono font-semibold">Avoided Cost</Badge>
               </div>
               <CardTitle className="text-2xl sm:text-3xl font-mono font-bold tabular-nums text-foreground mt-2">
-                $142,000<span className="text-sm font-sans font-normal text-muted"> / yr</span>
+                ₹12,00,000<span className="text-sm font-sans font-normal text-muted"> / yr</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-foreground-secondary leading-relaxed">
-                Average annual savings in CAISO/PJM grid deviation penalties per 50 MW installation by automating ramp mitigation.
+                Average annual savings in grid deviation settlement penalties per 50 MW installation by automating ramp mitigation.
               </p>
             </CardContent>
           </Card>

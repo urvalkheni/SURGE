@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  passwordHash  String?
+  role          String    @default("Plant Operator")
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  plants        Plant[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Plant {
+  id            String              @id @default(cuid())
+  ownerId       String
+  name          String
+  type          String              @default("SOLAR")
+  country       String              @default("India")
+  state         String              @default("Gujarat")
+  city          String              @default("Ahmedabad")
+  latitude      Float               @default(23.0225)
+  longitude     Float               @default(72.5714)
+  timezone      String              @default("Asia/Kolkata")
+  isDemo        Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  owner         User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  configuration PlantConfiguration?
+  weatherLogs   WeatherSnapshot[]
+}
+
+model PlantConfiguration {
+  id                     String   @id @default(cuid())
+  plantId                String   @unique
+  acCapacityMw           Float    @default(42.0)
+  dcCapacityMw           Float    @default(50.0)
+  moduleTechnology       String   @default("Monocrystalline PERC")
+  moduleCount            Int      @default(125000)
+  inverterCount          Int      @default(24)
+  inverterCapacityMw     Float    @default(1.75)
+  panelTiltDeg           Float    @default(23.0)
+  panelAzimuthDeg        Float    @default(0.0)
+  trackingType           String   @default("Fixed Tilt")
+  performanceRatio       Float    @default(0.82)
+  tempCoefficientPct     Float    @default(-0.35)
+  systemLossesPct        Float    @default(14.0)
+  inverterEfficiencyPct  Float    @default(98.4)
+  availabilityPct        Float    @default(99.1)
+  gridOperator           String   @default("GETCO")
+  gridVoltageKv          Float    @default(220.0)
+  interconnectCapacityMw Float    @default(50.0)
+  gridNode               String   @default("IN-GJ-CHOR-01")
+  bessEnabled            Boolean  @default(true)
+  bessPowerMw            Float    @default(20.0)
+  bessEnergyMwh          Float    @default(40.0)
+  bessSocPct             Float    @default(68.0)
+  rampLimitMwPerMin      Float    @default(2.5)
+  currency               String   @default("INR")
+  energyPricePerMwh      Float    @default(3200.0)
+  updatedAt              DateTime @updatedAt
+
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+}
+
+model WeatherSnapshot {
+  id                      String   @id @default(cuid())
+  plantId                 String
+  source                  String   @default("OPEN-METEO")
+  fetchedAt               DateTime @default(now())
+  latitude                Float
+  longitude               Float
+  timezone                String
+  currentTempC            Float
+  currentHumidityPct      Float
+  currentCloudCoverPct    Float
+  currentWindSpeedMs      Float
+  currentWindDirectionDeg Float?
+  currentPrecipMm         Float?
+  currentGhi              Float
+  currentDni              Float
+  currentDhi              Float?
+  currentGti              Float
+  currentWeatherCode      Int      @default(0)
+  isDay                   Boolean  @default(true)
+  pointsJson              String
+
+  plant Plant @relation(fields: [plantId], references: [id], onDelete: Cascade)
+}

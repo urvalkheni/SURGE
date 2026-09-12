@@ -23,7 +23,10 @@ export interface ForecastPoint {
   windSpeedMs: number;        // Wind speed at hub/array height (m/s)
   isDaytime: boolean;         // Daytime flag for background solar shading
   isRampAlert?: boolean;      // Rapid ramp delta threshold exceeded
+  rampRateMw15m?: number;    // Projected ramp delta (MW per interval)
   humidityPercent?: number;   // Relative humidity (%)
+  source?: 'physics' | 'ml';  // Forecast computation origin
+  modelStatus?: 'connected' | 'not_connected'; // ML integration status
 }
 
 export interface ForecastSummary {

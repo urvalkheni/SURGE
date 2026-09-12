@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { Gauge, CheckCircle2, Battery, Cpu, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { dashboardData } from '@/data/demo-data';
+import { usePlant } from '@/contexts/plant-context';
 import { cn } from '@/lib/utils';
 
 export function CurrentCondition({ className }: { className?: string }) {
-  const { currentTelemetry, plant } = dashboardData;
+  const { currentOutputMw, utilizationPercent, configuration } = usePlant();
 
   return (
     <div
@@ -31,11 +31,11 @@ export function CurrentCondition({ className }: { className?: string }) {
       <div className="p-3.5 rounded-md bg-[#FAFBF9] border border-border-subtle flex items-center justify-between">
         <div>
           <span className="text-[10px] font-mono uppercase font-bold text-muted">
-            Instantaneous Output
+            Estimated Active Output
           </span>
           <div className="font-mono font-bold text-2xl text-foreground tabular-nums flex items-baseline gap-1 mt-0.5">
-            <span>{currentTelemetry.outputMw.toFixed(1)}</span>
-            <span className="text-xs font-normal text-muted">/ {plant.acCapacityMw.toFixed(1)} MW</span>
+            <span>{currentOutputMw.toFixed(1)}</span>
+            <span className="text-xs font-normal text-muted">/ {configuration.acCapacityMw.toFixed(1)} MW</span>
           </div>
         </div>
 
@@ -44,7 +44,7 @@ export function CurrentCondition({ className }: { className?: string }) {
             Utilization
           </span>
           <div className="font-mono font-bold text-xl text-primary tabular-nums mt-0.5">
-            {currentTelemetry.utilizationPercent.toFixed(1)}%
+            {utilizationPercent.toFixed(1)}%
           </div>
         </div>
       </div>
@@ -52,46 +52,48 @@ export function CurrentCondition({ className }: { className?: string }) {
       {/* Grid, Inverter & Storage Health Grid */}
       <div className="space-y-2 text-xs font-mono">
         {/* Active Ramp Rate */}
-        <div className="flex items-center justify-between p-2 rounded bg-white border border-border-subtle">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 p-2 rounded bg-white border border-border-subtle">
+          <div className="flex items-center gap-2 shrink-0">
             <Activity className="size-3.5 text-primary" />
-            <span className="text-foreground-secondary">Ramp Rate:</span>
+            <span className="text-foreground-secondary">Ramp Limit:</span>
           </div>
-          <span className="font-bold text-foreground tabular-nums">
-            {currentTelemetry.rampRateMwPerMin.toFixed(2)} MW/min (Nominal)
+          <span className="font-bold text-foreground tabular-nums text-right">
+            {configuration.rampLimitMwPerMin.toFixed(2)} MW/min ({configuration.gridOperator})
           </span>
         </div>
 
         {/* Grid Interconnection Frequency */}
-        <div className="flex items-center justify-between p-2 rounded bg-white border border-border-subtle">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 p-2 rounded bg-white border border-border-subtle">
+          <div className="flex items-center gap-2 shrink-0">
             <CheckCircle2 className="size-3.5 text-primary" />
-            <span className="text-foreground-secondary">Grid Frequency:</span>
+            <span className="text-foreground-secondary">Interconnect:</span>
           </div>
-          <span className="font-bold text-foreground tabular-nums">
-            {currentTelemetry.gridFrequencyHz.toFixed(2)} Hz · {currentTelemetry.gridToleranceStatus}
+          <span className="font-bold text-foreground tabular-nums text-right">
+            {configuration.gridVoltageKv} kV · {configuration.gridNode}
           </span>
         </div>
 
         {/* Inverter Substation Status */}
-        <div className="flex items-center justify-between p-2 rounded bg-white border border-border-subtle">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 p-2 rounded bg-white border border-border-subtle">
+          <div className="flex items-center gap-2 shrink-0">
             <Cpu className="size-3.5 text-primary" />
             <span className="text-foreground-secondary">Inverters:</span>
           </div>
-          <span className="font-bold text-foreground tabular-nums">
-            {currentTelemetry.inverterOnlineCount}/{currentTelemetry.inverterTotalCount} Online ({currentTelemetry.inverterEfficiencyPercent}%)
+          <span className="font-bold text-foreground tabular-nums text-right">
+            {configuration.inverterCount} Blocks Online ({configuration.inverterEfficiencyPct}%)
           </span>
         </div>
 
         {/* BESS Battery Storage */}
-        <div className="flex items-center justify-between p-2 rounded bg-white border border-border-subtle">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-1.5 p-2 rounded bg-white border border-border-subtle">
+          <div className="flex items-center gap-2 shrink-0">
             <Battery className="size-3.5 text-primary" />
             <span className="text-foreground-secondary">BESS Ready:</span>
           </div>
-          <span className="font-bold text-primary-dark tabular-nums">
-            {currentTelemetry.bessSocPercent.toFixed(0)}% SOC ({currentTelemetry.bessDischargeCapacityMw} MW cap)
+          <span className="font-bold text-primary-dark tabular-nums text-right">
+            {configuration.bessEnabled
+              ? `${configuration.bessSocPct.toFixed(0)}% SOC (${configuration.bessPowerMw} MW / ${configuration.bessEnergyMwh} MWh)`
+              : 'Disabled (No Battery)'}
           </span>
         </div>
       </div>

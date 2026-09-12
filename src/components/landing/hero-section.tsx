@@ -88,10 +88,10 @@ export function HeroSection() {
                 </Button>
               </a>
 
-              <Link href="/dashboard">
+              <Link href="/login">
                 <Button size="lg" variant="secondary" className="gap-2 font-medium min-h-[44px]">
                   <BarChart3 className="size-4 text-foreground-secondary" />
-                  <span>View Operations</span>
+                  <span>Control Room Access</span>
                 </Button>
               </Link>
             </motion.div>

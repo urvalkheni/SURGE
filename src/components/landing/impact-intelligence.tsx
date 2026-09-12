@@ -9,7 +9,7 @@ export function ImpactIntelligence() {
   const kpis = [
     {
       label: 'Avoided Imbalance Exposure',
-      value: '$18,400',
+      value: '₹1,50,000',
       sub: 'Per simulated cloud event',
       icon: DollarSign,
       color: 'text-primary',
@@ -112,7 +112,7 @@ export function ImpactIntelligence() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-danger font-bold">3.</span>
-                <span>Severe CAISO/PJM imbalance settlement penalties incurred ($18,400+).</span>
+                <span>Severe grid DSM imbalance settlement penalties incurred (₹1,50,000+).</span>
               </li>
             </ul>
           </div>

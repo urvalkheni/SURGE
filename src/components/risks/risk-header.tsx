@@ -13,6 +13,14 @@ export interface RiskHeaderProps {
   selectedHorizon: '24h' | '48h' | '72h';
   onHorizonChange: (h: '24h' | '48h' | '72h') => void;
   onResetFilters: () => void;
+  plantName?: string;
+  capacityMw?: number;
+  location?: string;
+  rampThreshold?: string;
+  aggregateRiskScore?: number;
+  activeHighCount?: number;
+  activeModerateCount?: number;
+  activeLowCount?: number;
 }
 
 export function RiskHeader({
@@ -23,6 +31,14 @@ export function RiskHeader({
   selectedHorizon,
   onHorizonChange,
   onResetFilters,
+  plantName = 'Ahmedabad Solar Plant',
+  capacityMw = 42.0,
+  location = 'Gujarat, India',
+  rampThreshold = '2.5 MW/min',
+  aggregateRiskScore = 0,
+  activeHighCount = 0,
+  activeModerateCount = 0,
+  activeLowCount = 0,
 }: RiskHeaderProps) {
   const isFiltered = selectedSeverity !== 'ALL' || selectedCategory !== 'ALL' || selectedHorizon !== '72h';
 
@@ -38,15 +54,14 @@ export function RiskHeader({
             <span className="text-muted">·</span>
             <div
               className="inline-flex items-center gap-1.5 text-xs text-primary-dark font-medium bg-[#EBF5EE] px-2 py-0.5 rounded-sm border border-[#BCE3CA]"
-              title="SCADA Simulated Telemetry feed"
+              title="Deterministic physics risk evaluation engine"
             >
               <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-primary" />
               </span>
               <Activity className="size-3 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">
-                SCADA SIMULATED <span className="text-foreground-secondary lowercase font-normal">· 18ms</span>
+                DETERMINISTIC PHYSICS <span className="text-foreground-secondary font-normal">· ACTIVE</span>
               </span>
             </div>
           </div>
@@ -55,7 +70,7 @@ export function RiskHeader({
             Risk Intelligence &amp; Anomaly Ledger
           </h1>
           <p className="text-xs sm:text-sm text-foreground-secondary mt-1">
-            Ahmedabad Solar Plant · 42 MW · GETCO 220kV Interconnect · CERC Balancing Compliance Matrix
+            {plantName} · {capacityMw} MW · {location} · Ramp Tolerance: {rampThreshold}
           </p>
         </div>
 
@@ -64,12 +79,15 @@ export function RiskHeader({
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-foreground-secondary">Aggregate Risk State:</span>
-              <Badge variant="warning" className="font-mono font-bold text-xs">
-                MODERATE · 62/100
+              <Badge
+                variant={aggregateRiskScore > 60 ? 'critical' : aggregateRiskScore > 25 ? 'warning' : 'nominal'}
+                className="font-mono font-bold text-xs"
+              >
+                {aggregateRiskScore > 60 ? 'HIGH' : aggregateRiskScore > 25 ? 'MODERATE' : 'NOMINAL'} · {aggregateRiskScore}/100
               </Badge>
             </div>
             <span className="text-[11px] font-mono text-muted mt-0.5">
-              1 HIGH · 2 MODERATE · 1 LOW ACTIVE
+              {activeHighCount} HIGH · {activeModerateCount} MODERATE · {activeLowCount} LOW ACTIVE
             </span>
           </div>
         </div>

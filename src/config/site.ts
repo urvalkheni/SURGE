@@ -4,8 +4,10 @@
 export const siteConfig = {
   name: 'RenewableIQ',
   shortName: 'RenewableIQ',
+  tagline: 'See the Shift. Before It Hits.',
+  expansion: 'Renewable Generation Intelligence & Grid Execution',
   description:
-    'AI-powered renewable energy generation forecasting and grid intelligence platform for commercial asset owners and transmission operators.',
+    'RenewableIQ — See the Shift. Before It Hits. Industrial renewable generation forecasting, physical modeling, and grid compliance intelligence platform.',
   url: 'https://renewableiq.energy',
   ogImage: 'https://renewableiq.energy/og.jpg',
   author: 'RenewableIQ Engineering Team',

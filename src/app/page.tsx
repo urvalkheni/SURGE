@@ -141,7 +141,7 @@ export default function LandingPage() {
                 <Zap className="size-3.5" />
               </div>
               <span className="font-display font-bold text-sm tracking-tight text-foreground">
-                Renewable<span className="text-primary">IQ</span>
+                RenewableIQ
               </span>
               <span className="text-xs text-muted font-mono ml-2">v1.0.0-prod</span>
             </div>
@@ -150,7 +150,7 @@ export default function LandingPage() {
               <a href="#forecast-section" className="hover:text-foreground">Forecast Workbench</a>
               <a href="#intelligence-flow" className="hover:text-foreground">Intelligence Flow</a>
               <a href="#impact-section" className="hover:text-foreground">Economic Impact</a>
-              <Link href="/dashboard" className="hover:text-foreground">Operations Control Room</Link>
+              <Link href="/login" className="hover:text-foreground">Control Room</Link>
             </div>
           </div>
 

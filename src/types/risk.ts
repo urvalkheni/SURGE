@@ -27,4 +27,11 @@ export interface RiskEvent {
   rootCause: string;
   status: 'active' | 'acknowledged' | 'mitigated' | 'dismissed';
   suggestedActionId?: string;
+
+  // Traceability properties
+  trigger?: string;
+  threshold?: number;
+  observedValue?: number;
+  unit?: string;
+  source?: string;
 }

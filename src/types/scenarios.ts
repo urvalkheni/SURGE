@@ -7,7 +7,8 @@ export interface ScenarioParameters {
   cloudCoverShiftPercent: number;  // -50 to +50 delta
   inverterAvailabilityPercent: number; // 50 to 100%
   bessInitialSocPercent: number;   // 0 to 100%
-  clearingPriceUsdMwh: number;     // $/MWh for economic impact calculation
+  clearingPriceInrMwh?: number;    // ₹/MWh for economic impact calculation
+  clearingPriceUsdMwh?: number;    // Legacy fallback
 }
 
 export interface ScenarioResultPoint {
@@ -21,7 +22,8 @@ export interface ScenarioResult {
   id: string;
   parameters: ScenarioParameters;
   netEnergyDeltaMwh: number;
-  financialExposureUsd: number;
+  financialExposureInr: number;
+  financialExposureUsd?: number;
   rampStressIndex: number; // 0 - 100
   adjustedRecommendation: string;
   points: ScenarioResultPoint[];

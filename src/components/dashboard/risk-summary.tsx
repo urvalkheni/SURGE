@@ -3,14 +3,43 @@ import Link from 'next/link';
 import { ShieldAlert, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { dashboardData } from '@/data/demo-data';
+import { usePlant } from '@/contexts/plant-context';
 import { cn } from '@/lib/utils';
 
 export function RiskSummary({ className }: { className?: string }) {
-  const { riskStatus } = dashboardData;
+  const { risks, configuration } = usePlant();
 
-  const getSeverityBadge = (level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL') => {
-    switch (level) {
+  const activeRisk = risks && risks.length > 0 ? risks[0] : null;
+
+  const level: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL' = activeRisk
+    ? activeRisk.severity === 'critical'
+      ? 'CRITICAL'
+      : activeRisk.severity === 'high'
+      ? 'HIGH'
+      : activeRisk.severity === 'medium'
+      ? 'MODERATE'
+      : 'LOW'
+    : 'LOW';
+
+  const score = activeRisk
+    ? activeRisk.severity === 'critical'
+      ? 88
+      : activeRisk.severity === 'high'
+      ? 74
+      : activeRisk.severity === 'medium'
+      ? 52
+      : 24
+    : 5;
+
+  const nextEventType = activeRisk ? activeRisk.category.replace('_', ' ').toUpperCase() : 'NOMINAL';
+  const nextEventWindow = activeRisk ? `T-${activeRisk.leadTimeMinutes}m` : 'Clear';
+  const nextEventDrop = activeRisk ? `${Math.abs(activeRisk.deltaMw).toFixed(1)} MW` : '0.0 MW';
+  const headline = activeRisk ? activeRisk.headline : 'Nominal grid injection stability';
+  const rampTolerance = configuration?.rampLimitMwPerMin ?? 2.5;
+  const expectedRamp = activeRisk?.rampRateMwPerMin ? activeRisk.rampRateMwPerMin.toFixed(2) : '0.00';
+
+  const getSeverityBadge = (lvl: 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL') => {
+    switch (lvl) {
       case 'LOW':
         return <Badge variant="nominal" className="text-[9px] px-1 py-0">LOW</Badge>;
       case 'MODERATE':
@@ -37,27 +66,39 @@ export function RiskSummary({ className }: { className?: string }) {
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
-          {getSeverityBadge(riskStatus.level)}
+          {getSeverityBadge(level)}
           <span className="text-xs font-mono font-bold text-foreground tabular-nums">
-            {riskStatus.score}/100
+            {score}/100
           </span>
         </div>
       </div>
 
       {/* Impending Event Alert Banner */}
-      <div className="p-3 rounded-md bg-[#FDF6EC] border border-[#F5D6A4] space-y-1.5 text-xs">
-        <div className="flex items-center justify-between font-mono">
-          <span className="font-bold text-[#8C570A]">
-            Next: {riskStatus.nextEvent.type} ({riskStatus.nextEvent.window})
-          </span>
-          <span className="text-danger font-bold tabular-nums">
-            {riskStatus.nextEvent.potentialDropMw} MW
-          </span>
+      {activeRisk ? (
+        <div className="p-3 rounded-md bg-[#FDF6EC] border border-[#F5D6A4] space-y-1.5 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-1 font-mono">
+            <span className="font-bold text-[#8C570A]">
+              Next: {nextEventType} ({nextEventWindow})
+            </span>
+            <span className="text-danger font-bold tabular-nums">
+              {nextEventDrop}
+            </span>
+          </div>
+          <p className="text-[11px] text-[#8C570A] leading-relaxed">
+            {headline}. Projected ramp rate of {expectedRamp} MW/min (Tolerance: {rampTolerance} MW/min).
+          </p>
         </div>
-        <p className="text-[11px] text-[#8C570A] leading-relaxed">
-          {riskStatus.headline}. Projected ramp rate of {riskStatus.nextEvent.expectedRampMwPerMin} MW/min exceeds the {riskStatus.nextEvent.toleranceRampMwPerMin} MW/min limit.
-        </p>
-      </div>
+      ) : (
+        <div className="p-3 rounded-md bg-[#EBF5EE] border border-[#BCE3CA] space-y-1 text-xs text-[#0D4F32]">
+          <div className="font-bold font-mono text-xs flex items-center justify-between">
+            <span>GRID RAMP STATUS: STABLE</span>
+            <span>0 ACTIVE ALERTS</span>
+          </div>
+          <p className="text-[11px] leading-relaxed">
+            Generation profile operates within configured {rampTolerance} MW/min ramp tolerances across the active horizon.
+          </p>
+        </div>
+      )}
 
       {/* Risk Drivers Breakdown */}
       <div className="space-y-1.5 text-xs font-mono">
@@ -65,46 +106,23 @@ export function RiskSummary({ className }: { className?: string }) {
           Primary Risk Drivers
         </span>
         <div className="space-y-1">
-          {riskStatus.drivers.map((driver) => (
-            <div
-              key={driver.label}
-              className="flex items-center justify-between p-1.5 rounded bg-[#FAFBF9] border border-border-subtle"
-            >
-              <span className="text-foreground-secondary text-[11px]">{driver.label}</span>
-              <span className="font-bold text-[#C98216] tabular-nums">+{driver.impact}</span>
+          {activeRisk ? (
+            <div className="flex items-center justify-between p-1.5 rounded bg-[#FAFBF9] border border-border-subtle">
+              <span className="text-foreground-secondary text-[11px]">{activeRisk.rootCause}</span>
+              <span className="font-bold text-[#C98216] tabular-nums">+{activeRisk.deltaMw} MW</span>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Compact Chronological Risk Timeline */}
-      <div className="space-y-1.5 text-xs font-mono">
-        <span className="text-[10px] uppercase font-bold text-muted tracking-wider">
-          Risk Horizon Timeline
-        </span>
-        <div className="grid grid-cols-5 gap-1 text-center">
-          {riskStatus.timeline.map((item) => (
-            <div
-              key={item.time}
-              className={cn(
-                'p-1.5 rounded-xs border text-[10px]',
-                item.level === 'HIGH'
-                  ? 'border-danger/40 bg-[#FDF2F2] text-danger font-bold'
-                  : item.level === 'MODERATE'
-                  ? 'border-[#F5D6A4] bg-[#FDF6EC] text-[#8C570A] font-semibold'
-                  : 'border-border-subtle bg-[#FAFBF9] text-muted'
-              )}
-            >
-              <div>{item.time}</div>
-              <div className="text-[9px] mt-0.5">{item.level}</div>
+          ) : (
+            <div className="flex items-center justify-between p-1.5 rounded bg-[#FAFBF9] border border-border-subtle">
+              <span className="text-foreground-secondary text-[11px]">Atmospheric solar radiation nominal</span>
+              <span className="font-bold text-primary tabular-nums">NOMINAL</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
       {/* Footer CTA */}
       <div className="pt-2 border-t border-border-subtle flex items-center justify-between text-xs">
-        <span className="text-[11px] font-mono text-muted">IEC 61850 Alert Bus</span>
+        <span className="text-[11px] font-mono text-muted">Deterministic Physics Radar</span>
         <Link href="/risks">
           <Button variant="ghost" size="sm" className="gap-1 font-medium text-warning-dark hover:text-danger h-7 px-2">
             <span>View Risk Analysis</span>

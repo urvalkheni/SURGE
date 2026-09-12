@@ -137,7 +137,7 @@ export function PrimaryRecommendationPanel({
                   </p>
                 </div>
                 <div className="text-[11px] text-danger font-mono font-semibold mt-2 pt-2 border-t border-border-subtle">
-                  Exceeds CERC Limit (-0.40)
+                  Exceeds Ramp Tolerance
                 </div>
               </div>
 
@@ -151,7 +151,7 @@ export function PrimaryRecommendationPanel({
                   </p>
                 </div>
                 <div className="text-[11px] text-foreground-secondary font-mono mt-2 pt-2 border-t border-border-subtle">
-                  Optical Depth &tau; = 4.8
+                  Physics Atmospheric Divergence
                 </div>
               </div>
 
@@ -161,7 +161,7 @@ export function PrimaryRecommendationPanel({
                     03 / PRESCRIBED ACTION
                   </span>
                   <p className="text-xs text-[#0D4F32] font-semibold mt-1 leading-relaxed">
-                    Dispatch BESS to discharge {overrideSetpointMw.toFixed(1)} MW at 14:40 IST (5 min prior to ramp onset)
+                    {recommendation.causalArchitecture.prescribedAction}
                   </p>
                 </div>
                 <div className="text-[11px] text-primary font-mono font-bold mt-2 pt-2 border-t border-[#BCE3CA]">
@@ -194,7 +194,7 @@ export function PrimaryRecommendationPanel({
               <span className="text-muted">|</span>
               <span>Post-Dispatch SOC: <strong className="text-primary">{recommendation.parameters.postDispatchSocPercent}%</strong></span>
               <span className="text-muted">|</span>
-              <span>Ensemble Confidence: <strong className="text-foreground">{recommendation.causalArchitecture.confidencePercent}%</strong></span>
+              <span>Physics Model Confidence: <strong className="text-foreground">{recommendation.causalArchitecture.confidencePercent}%</strong></span>
             </div>
 
             <div className="flex items-center gap-1.5 text-primary">

@@ -11,9 +11,11 @@ import { ShieldCheck, ArrowRight, Clock, CloudSun } from 'lucide-react';
 
 export interface RiskDiagnosticInspectorProps {
   selectedRisk: RiskLedgerEvent;
+  gridNode?: string;
+  rampLimit?: string;
 }
 
-export function RiskDiagnosticInspector({ selectedRisk }: RiskDiagnosticInspectorProps) {
+export function RiskDiagnosticInspector({ selectedRisk, gridNode = 'GETCO-220KV', rampLimit = '2.5 MW/min' }: RiskDiagnosticInspectorProps) {
   const isCritical = selectedRisk.severity === 'HIGH';
 
   return (
@@ -69,9 +71,9 @@ export function RiskDiagnosticInspector({ selectedRisk }: RiskDiagnosticInspecto
             <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
               <span className="text-[11px] font-medium text-muted uppercase">Ramp Rate Exceedance</span>
               <div className="font-mono text-lg sm:text-xl font-bold text-danger mt-1">
-                -0.62 <span className="text-xs font-normal text-muted">MW/min</span>
+                {selectedRisk.magnitude.includes('MW/min') ? selectedRisk.magnitude.split('(')[1]?.replace(' ramp)', '') || selectedRisk.magnitude : 'Nominal'}
               </div>
-              <p className="text-[11px] text-danger-dark font-medium mt-0.5">Limit: -0.40 MW/min</p>
+              <p className="text-[11px] text-danger-dark font-medium mt-0.5">Limit: {rampLimit}</p>
             </div>
 
             <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
@@ -87,9 +89,11 @@ export function RiskDiagnosticInspector({ selectedRisk }: RiskDiagnosticInspecto
             <div className="p-3 rounded-md border border-danger/20 bg-danger-tint/15">
               <span className="text-[11px] font-medium text-danger-dark uppercase">Financial Exposure</span>
               <div className="font-mono text-lg sm:text-xl font-bold text-danger-dark mt-1">
-                ${selectedRisk.penaltyExposureUsd.toLocaleString()}
+                {selectedRisk.penaltyExposureInr !== 'Tariff Not Configured' ? selectedRisk.penaltyExposureInr : '₹0'}
               </div>
-              <p className="text-[11px] text-danger-dark/80 mt-0.5">{selectedRisk.penaltyExposureInr} DSM charges</p>
+              <p className="text-[11px] text-danger-dark/80 mt-0.5">
+                {selectedRisk.penaltyExposureInr !== 'Tariff Not Configured' ? 'PPA Imbalance Exposure' : 'Tariff Not Configured'}
+              </p>
             </div>
           </div>
         </div>
@@ -113,7 +117,7 @@ export function RiskDiagnosticInspector({ selectedRisk }: RiskDiagnosticInspecto
             {selectedRisk.dniCollapse && (
               <span>DNI Variation: <strong className="text-danger">{selectedRisk.dniCollapse}</strong></span>
             )}
-            <span>Grid Node: <strong className="text-foreground">GETCO-SARKHEJ-220KV</strong></span>
+            <span>Grid Node: <strong className="text-foreground">{gridNode}</strong></span>
           </div>
         </div>
 
@@ -147,7 +151,7 @@ export function RiskDiagnosticInspector({ selectedRisk }: RiskDiagnosticInspecto
 
           <Link href="/recommendations" className="shrink-0">
             <Button size="sm" className="gap-1.5 h-9 font-medium text-xs bg-primary hover:bg-primary-dark text-white shadow-subtle">
-              <span>Execute in Workstation</span>
+              <span>Simulate Dispatch in Workstation</span>
               <ArrowRight className="size-3.5" />
             </Button>
           </Link>

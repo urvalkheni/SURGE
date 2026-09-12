@@ -18,12 +18,12 @@ export function LandingHeader() {
             <div className="flex size-8 items-center justify-center rounded-sm bg-primary-dark text-white shadow-subtle">
               <Zap className="size-4" />
             </div>
-            <span className="font-display font-bold text-base tracking-tight text-foreground">
-              Renewable<span className="text-primary">IQ</span>
+            <span className="font-display font-bold text-lg tracking-tight text-foreground">
+              RenewableIQ
             </span>
           </Link>
-          <span className="hidden lg:inline-block ml-2 text-xs text-foreground-secondary border-l border-border pl-3 font-medium">
-            AI Renewable Energy Forecasting & Grid Intelligence
+          <span className="hidden lg:inline-block ml-2 text-xs text-foreground-secondary border-l border-border pl-3 font-mono font-medium">
+            Renewable Generation Intelligence & Grid Execution
           </span>
         </div>
 
@@ -38,8 +38,8 @@ export function LandingHeader() {
           <a href="#impact-section" className="hover:text-foreground transition-colors focus-ring rounded-xs py-1 px-1.5">
             Outcomes & Impact
           </a>
-          <Link href="/dashboard" className="hover:text-foreground transition-colors focus-ring rounded-xs py-1 px-1.5">
-            Operations
+          <Link href="/login" className="hover:text-foreground transition-colors focus-ring rounded-xs py-1 px-1.5">
+            Control Room
           </Link>
         </nav>
 
@@ -51,9 +51,9 @@ export function LandingHeader() {
 
           <div className="h-4 w-px bg-border hidden sm:block" />
 
-          <Link href="/dashboard">
+          <Link href="/login">
             <Button size="sm" variant="primary" className="gap-1.5 font-medium min-h-[36px]">
-              <span>Enter Platform</span>
+              <span>Control Room Access</span>
               <ArrowRight className="size-3.5" />
             </Button>
           </Link>
@@ -101,11 +101,11 @@ export function LandingHeader() {
               Operational Outcomes
             </a>
             <Link
-              href="/dashboard"
+              href="/login"
               onClick={() => setMobileMenuOpen(false)}
               className="px-2 py-1.5 rounded-md hover:bg-[#F3F6F3] text-primary font-semibold flex items-center justify-between"
             >
-              <span>Operations Control Room</span>
+              <span>Control Room Access</span>
               <ArrowRight className="size-4" />
             </Link>
           </nav>

@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+import { usePlant } from '@/contexts/plant-context';
+
 export interface DashboardHeaderProps {
   horizon: '24h' | '48h' | '72h';
   onHorizonChange: (horizon: '24h' | '48h' | '72h') => void;
@@ -17,28 +19,42 @@ export interface DashboardHeaderProps {
 export function DashboardHeader({
   horizon,
   onHorizonChange,
-  plantName = 'Ahmedabad Solar Plant',
-  capacityMw = 42.0,
+  plantName: propPlantName,
+  capacityMw: propCapacityMw,
   className,
 }: DashboardHeaderProps) {
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const [lastUpdated, setLastUpdated] = React.useState('12:00 IST (06:30 UTC)');
+  const { plant, configuration, refreshWeather, isRefreshingWeather } = usePlant();
+  const plantName = propPlantName || plant?.name || 'Ahmedabad Solar Plant';
+  const capacityMw = propCapacityMw ?? configuration?.acCapacityMw ?? 42.0;
+  const dcCapacityMw = configuration?.dcCapacityMw ?? 50.0;
+  const gridInterconnect = configuration?.gridOperator
+    ? `${configuration.gridOperator} ${configuration.gridVoltageKv}kV Interconnect`
+    : 'GETCO 220kV Interconnect';
+
+  const [isLocalSyncing, setIsLocalSyncing] = React.useState(false);
+  const [lastUpdatedText, setLastUpdatedText] = React.useState('12:00 IST (06:30 UTC)');
   const [exportNotice, setExportNotice] = React.useState(false);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
+  const isRefreshing = isRefreshingWeather || isLocalSyncing;
+
+  const handleRefresh = async () => {
+    setIsLocalSyncing(true);
+    try {
+      await refreshWeather();
       const now = new Date();
       const istTime = now.toLocaleTimeString('en-US', {
-        timeZone: 'Asia/Kolkata',
+        timeZone: plant?.timezone || 'Asia/Kolkata',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
         hour12: false,
       });
-      setLastUpdated(`${istTime} IST (Simulated Sync)`);
-    }, 600);
+      setLastUpdatedText(`${istTime} (${plant?.timezone || 'IST'} Sync)`);
+    } catch {
+      // Fallback
+    } finally {
+      setIsLocalSyncing(false);
+    }
   };
 
   const handleExport = () => {
@@ -71,25 +87,24 @@ export function DashboardHeader({
 
           <div
             className="flex items-center gap-1 text-[11px] font-mono text-foreground-secondary border-l border-border pl-2"
-            title="SCADA Bus: IEC 61850 protocol emulated"
+            title="SCADA Telemetry bus status"
           >
             <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-primary" />
+              <span className="relative inline-flex size-2 rounded-full bg-muted" />
             </span>
-            <Wifi className="size-3 text-primary ml-0.5" />
-            <span className="text-primary-dark font-medium">SCADA SIMULATED · 18ms</span>
+            <Wifi className="size-3 text-muted ml-0.5" />
+            <span className="text-foreground-secondary font-medium">SCADA: NOT CONNECTED</span>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted font-mono tabular-nums">
-          <span>Nameplate: {capacityMw.toFixed(1)} MW AC (50 MW DC)</span>
+          <span>Nameplate: {capacityMw.toFixed(1)} MW AC ({dcCapacityMw.toFixed(1)} MW DC)</span>
           <span>·</span>
-          <span>Grid: GETCO 220kV Interconnect</span>
+          <span>Grid: {gridInterconnect}</span>
           <span>·</span>
           <span className="flex items-center gap-1 text-foreground-secondary">
             <Clock className="size-3 text-primary" />
-            <span>Updated: {lastUpdated}</span>
+            <span>Updated: {lastUpdatedText}</span>
           </span>
         </div>
       </div>
@@ -130,7 +145,7 @@ export function DashboardHeader({
             title="Trigger immediate telemetry bus poll"
           >
             <RefreshCw className={cn('size-3.5 text-foreground-secondary', isRefreshing && 'animate-spin text-primary')} />
-            <span>{isRefreshing ? 'Syncing...' : 'Sync SCADA'}</span>
+            <span>{isRefreshing ? 'Syncing...' : 'Sync Weather'}</span>
           </Button>
 
           <Button

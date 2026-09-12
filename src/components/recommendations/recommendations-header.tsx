@@ -21,15 +21,14 @@ export function RecommendationsHeader({ data }: RecommendationsHeaderProps) {
             <span className="text-muted">·</span>
             <div
               className="inline-flex items-center gap-1.5 text-xs text-primary-dark font-medium bg-[#EBF5EE] px-2 py-0.5 rounded-sm border border-[#BCE3CA]"
-              title="SCADA Simulated Telemetry feed"
+              title="Deterministic physics prescriptive dispatch engine"
             >
               <span className="relative flex size-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-primary" />
               </span>
               <Activity className="size-3 text-primary" />
               <span className="font-mono text-[11px] uppercase tracking-wider font-semibold">
-                SCADA SIMULATED <span className="text-foreground-secondary lowercase font-normal">· 18ms</span>
+                DETERMINISTIC PHYSICS <span className="text-foreground-secondary font-normal">· ACTIVE</span>
               </span>
             </div>
           </div>
@@ -38,7 +37,7 @@ export function RecommendationsHeader({ data }: RecommendationsHeaderProps) {
             Prescriptive Operations Workstation
           </h1>
           <p className="text-xs sm:text-sm text-foreground-secondary mt-1">
-            {data.plant} · Autonomous &amp; Supervised BESS Dispatch Setpoints · Risk Mitigation Engine
+            {data.plant} · Supervised Dispatch Setpoints · Risk Mitigation Engine
           </p>
         </div>
 
@@ -52,7 +51,7 @@ export function RecommendationsHeader({ data }: RecommendationsHeaderProps) {
 
             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm bg-[#F4F6F4] border border-border-subtle text-[11px] font-mono text-foreground-secondary">
               <Lock className="size-3 text-muted" />
-              <span>SCADA Interlock: Simulated Only</span>
+              <span>SCADA Write-Back: Not Connected</span>
             </div>
           </div>
 

@@ -6,30 +6,57 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sliders, RotateCcw, BatteryCharging } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatINR } from '@/lib/formatters';
 
 export interface OperatorOverrideSandboxProps {
   setpointMw: number;
   onSetpointChange: (val: number) => void;
   onResetDefault: () => void;
+  bessEnabled?: boolean;
+  maxPowerMw?: number;
+  bessEnergyMwh?: number;
+  currentSoc?: number;
+  rampLimitMwPerMin?: number;
+  nominalDropMw?: number;
+  energyPricePerMwh?: number;
 }
 
 export function OperatorOverrideSandbox({
   setpointMw,
   onSetpointChange,
   onResetDefault,
+  bessEnabled = true,
+  maxPowerMw = 20.0,
+  bessEnergyMwh = 40.0,
+  currentSoc = 68.0,
+  rampLimitMwPerMin = 2.5,
+  nominalDropMw = 8.7,
+  energyPricePerMwh = 0,
 }: OperatorOverrideSandboxProps) {
-  // Real-time calculations based on slider setpoint (0 to 20 MW)
-  const resultingRamp = Number((-0.62 + (setpointMw / 20.0) * 0.44).toFixed(2));
-  const isCompliant = resultingRamp >= -0.40; // CERC limit is -0.40
-  const isOptimal = setpointMw >= 14.0 && setpointMw <= 20.0;
+  if (!bessEnabled || maxPowerMw <= 0) {
+    return null;
+  }
+
+  const maxPower = Math.max(1, maxPowerMw);
+  const baselineDrop = nominalDropMw;
+  const residualDrop = Math.max(0, baselineDrop - setpointMw);
+  const resultingRamp = Number((-residualDrop / 15).toFixed(2));
+  const isCompliant = Math.abs(resultingRamp) <= rampLimitMwPerMin;
+  const isOptimal = setpointMw >= baselineDrop * 0.7 && setpointMw <= maxPower;
 
   const compliancePercent = isCompliant
-    ? Math.min(98.4, Number((88 + (setpointMw - 10) * 1.15).toFixed(1)))
-    : Math.max(42.0, Number((42 + setpointMw * 4.2).toFixed(1)));
+    ? Math.min(99.0, Number((85 + (setpointMw / maxPower) * 14).toFixed(1)))
+    : Math.max(40.0, Number((40 + (setpointMw / maxPower) * 45).toFixed(1)));
 
-  const residualExposureUsd = Math.max(3500, Math.round(18400 - setpointMw * 784));
-  const socDepletionPercent = Number((setpointMw * 0.65).toFixed(1));
-  const postSocPercent = Number((74.0 - socDepletionPercent).toFixed(1));
+  const tariffConfigured = energyPricePerMwh > 0;
+  const exposureInr = tariffConfigured ? Math.round(residualDrop * energyPricePerMwh) : 0;
+  const avoidedInr = tariffConfigured ? Math.round(setpointMw * energyPricePerMwh) : 0;
+
+  const dispatchDurationMinutes = 45;
+  const energyDispatchedMwh = (setpointMw * (dispatchDurationMinutes / 60));
+  const maxEnergy = Math.max(1, bessEnergyMwh);
+  const socDepletionPercent = Number(((energyDispatchedMwh / maxEnergy) * 100).toFixed(1));
+  const postSocPercent = Number(Math.max(0, currentSoc - socDepletionPercent).toFixed(1));
 
   return (
     <Card id="setpoint-sandbox" className="shadow-card mb-6 scroll-mt-20 border-border">
@@ -43,7 +70,7 @@ export function OperatorOverrideSandbox({
             variant={isOptimal ? 'nominal' : isCompliant ? 'warning' : 'critical'}
             className="font-mono text-xs uppercase"
           >
-            {isOptimal ? 'SAFE OPERATING ZONE' : isCompliant ? 'MARGINAL COMPLIANCE' : 'Ramp Violation Zone'}
+            {isOptimal ? 'SAFE OPERATING ZONE' : isCompliant ? 'MARGINAL BUFFER' : 'RAMP EXCURSION'}
           </Badge>
         </div>
         <CardDescription className="text-xs mt-0.5">
@@ -60,7 +87,7 @@ export function OperatorOverrideSandbox({
                 BESS Active Discharge Setpoint:
               </span>
               <p className="text-xs text-foreground-secondary mt-0.5">
-                Target asset: BESS Inverter Units 1 &amp; 2 (40 MWh system)
+                Target asset: Plant BESS Unit ({maxPower} MW / {bessEnergyMwh} MWh system)
               </p>
             </div>
 
@@ -68,7 +95,7 @@ export function OperatorOverrideSandbox({
               <span className="font-mono text-2xl sm:text-3xl font-bold text-primary tabular-nums">
                 {setpointMw.toFixed(1)} <span className="text-sm font-medium text-foreground-secondary">MW</span>
               </span>
-              {setpointMw !== 19.0 && (
+              {setpointMw !== Number((maxPower * 0.9).toFixed(1)) && (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -76,7 +103,7 @@ export function OperatorOverrideSandbox({
                   className="h-8 text-xs font-mono text-muted hover:text-foreground gap-1"
                 >
                   <RotateCcw className="size-3" />
-                  <span>Reset (19.0 MW)</span>
+                  <span>Reset Default</span>
                 </Button>
               )}
             </div>
@@ -87,21 +114,20 @@ export function OperatorOverrideSandbox({
             <input
               type="range"
               min="0"
-              max="20"
+              max={maxPower}
               step="0.5"
               value={setpointMw}
               onChange={(e) => onSetpointChange(parseFloat(e.target.value))}
               className="w-full h-2.5 bg-[#E3E8E3] rounded-lg appearance-none cursor-pointer accent-primary"
-              aria-label="BESS Discharge Setpoint Slider (0 to 20 MW)"
+              aria-label={`BESS Discharge Setpoint Slider (0 to ${maxPower} MW)`}
             />
 
             {/* Slider visual track markings */}
             <div className="flex justify-between text-[11px] font-mono text-muted px-1">
-              <span>0.0 MW (No BESS)</span>
-              <span className="text-danger font-semibold">10.0 MW</span>
-              <span className="text-warning font-semibold">14.0 MW (Threshold)</span>
-              <span className="text-primary font-bold">19.0 MW (Recommended)</span>
-              <span>20.0 MW (Max)</span>
+              <span>0.0 MW (Standby)</span>
+              <span className="text-warning font-semibold">{(maxPower * 0.5).toFixed(1)} MW</span>
+              <span className="text-primary font-bold">{setpointMw.toFixed(1)} MW (Active)</span>
+              <span>{maxPower.toFixed(1)} MW (Max)</span>
             </div>
           </div>
 
@@ -109,10 +135,10 @@ export function OperatorOverrideSandbox({
           <div className="mt-4 pt-3 border-t border-border-subtle flex flex-wrap items-center justify-between text-xs text-foreground-secondary">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-xs bg-primary/20 border border-primary" />
-              <span className="font-mono">Safe Operating Zone: 14.0 MW – 20.0 MW maintains full CERC compliance</span>
+              <span className="font-mono">Configured Plant Ramp Limit: {rampLimitMwPerMin} MW/min</span>
             </div>
             <span className="font-mono text-muted text-[11px]">
-              CERC Reg 5.2 limit: -0.40 MW/min
+              Maximum Inverter Capacity: {maxPower} MW
             </span>
           </div>
         </div>
@@ -128,45 +154,45 @@ export function OperatorOverrideSandbox({
               </div>
             </div>
             <p className={cn('text-[11px] font-medium mt-1', isCompliant ? 'text-primary' : 'text-danger')}>
-              {isCompliant ? 'Compliant (Limit: -0.40)' : 'VIOLATION OF CERC LIMIT'}
+              {isCompliant ? `Compliant (Limit: ${rampLimitMwPerMin} MW/min)` : 'Exceeds Tolerance'}
             </p>
           </div>
 
           {/* Compliance Probability */}
           <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-muted uppercase">Grid Compliance Probability</span>
+              <span className="text-[11px] font-medium text-muted uppercase">Tolerance Compliance</span>
               <div className={cn('font-mono text-xl font-bold mt-1 tabular-nums', compliancePercent >= 90 ? 'text-primary' : 'text-warning')}>
                 {compliancePercent.toFixed(1)}%
               </div>
             </div>
-            <p className="text-[11px] text-foreground-secondary mt-1">Based on 18 NWP ensemble members</p>
+            <p className="text-[11px] text-foreground-secondary mt-1">Physics ramp rate smoothing model</p>
           </div>
 
-          {/* Residual DSM Exposure */}
+          {/* Residual Exposure */}
           <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-muted uppercase">Residual Financial Exposure</span>
+              <span className="text-[11px] font-medium text-muted uppercase">Residual Exposure</span>
               <div className="font-mono text-xl font-bold text-foreground mt-1 tabular-nums">
-                ${residualExposureUsd.toLocaleString()}
+                {tariffConfigured ? formatINR(exposureInr) : '₹0'}
               </div>
             </div>
             <p className="text-[11px] text-primary font-medium mt-1">
-              ${(18400 - residualExposureUsd).toLocaleString()} penalty avoided
+              {tariffConfigured ? `${formatINR(avoidedInr)} mitigated` : 'Tariff unconfigured'}
             </p>
           </div>
 
           {/* Battery SOC Depletion */}
           <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] flex flex-col justify-between">
             <div>
-              <span className="text-[11px] font-medium text-muted uppercase">Battery Capacity Post-Dispatch</span>
+              <span className="text-[11px] font-medium text-muted uppercase">Battery SOC Post-Dispatch</span>
               <div className="font-mono text-xl font-bold text-foreground mt-1 tabular-nums">
                 {postSocPercent}% <span className="text-xs font-normal text-muted">SOC</span>
               </div>
             </div>
             <p className="text-[11px] text-foreground-secondary mt-1 flex items-center gap-1">
               <BatteryCharging className="size-3 text-primary" />
-              Depletes {socDepletionPercent}% (Safe reserve)
+              Depletes {socDepletionPercent}% (from {currentSoc}%)
             </p>
           </div>
         </div>

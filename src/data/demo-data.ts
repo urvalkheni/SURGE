@@ -785,28 +785,45 @@ function generateWorkbench15MinPoints(): HourlyWorkbenchPoint[] {
   return points;
 }
 
-export function exportForecastCsv(points: HourlyWorkbenchPoint[]): void {
+export function exportForecastCsv(
+  points: HourlyWorkbenchPoint[],
+  options?: {
+    plantName?: string;
+    resolution?: '15m' | '1h';
+    horizon?: string;
+    weatherSource?: string;
+    forecastSource?: string;
+  }
+): void {
   if (typeof window === 'undefined') return;
+
+  const res = options?.resolution || '1h';
+  const weatherSrc = options?.weatherSource || 'OPEN_METEO_LIVE';
+  const forecastSrc = options?.forecastSource || 'PHYSICS_BASELINE';
 
   const headers = [
     'Time (IST)',
     'Timestamp (UTC)',
+    'Resolution',
     'P10 Forecast (MW)',
     'P50 Forecast (MW)',
     'P90 Forecast (MW)',
     'Day-Ahead Schedule (MW)',
     'Delta vs Schedule (MW)',
-    'Ramp Rate (MW/15m)',
+    'Ramp Rate (MW/interval)',
     'Weather Condition',
     'Cloud Cover (%)',
     'GHI (W/m2)',
     'Temperature (C)',
     'Ramp Alert',
+    'Weather Source',
+    'Forecast Source',
   ];
 
   const rows = points.map((p) => [
     `"${p.timeIst}"`,
     `"${p.timestampUtc}"`,
+    `"${res}"`,
     p.p10Mw.toFixed(1),
     p.p50Mw.toFixed(1),
     p.p90Mw.toFixed(1),
@@ -818,6 +835,8 @@ export function exportForecastCsv(points: HourlyWorkbenchPoint[]): void {
     p.ghiWm2,
     p.temperatureC.toFixed(1),
     p.isRampAlert ? 'YES' : 'NO',
+    `"${weatherSrc}"`,
+    `"${forecastSrc}"`,
   ]);
 
   const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
@@ -825,7 +844,9 @@ export function exportForecastCsv(points: HourlyWorkbenchPoint[]): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `renewableiq-forecast-ahmedabad-42mw-${new Date().toISOString().slice(0, 10)}.csv`);
+  const plantSlug = (options?.plantName || 'renewable-plant').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  link.setAttribute('download', `surge-forecast-${plantSlug}-${res}-${dateStr}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

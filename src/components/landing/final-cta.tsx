@@ -30,10 +30,10 @@ export function FinalCta() {
           </div>
 
           <div className="relative flex flex-wrap items-center gap-4">
-            <Link href="/dashboard">
+            <Link href="/login">
               <Button size="lg" variant="primary" className="gap-2 font-semibold min-h-[44px]">
                 <BarChart2 className="size-4" />
-                <span>Open Operations</span>
+                <span>Control Room Access</span>
                 <ArrowRight className="size-4" />
               </Button>
             </Link>

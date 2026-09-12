@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ForecastChart } from '@/components/charts/forecast-chart';
 import { getAhmedabadForecastData } from '@/data/demo-data';
+import { usePlant } from '@/contexts/plant-context';
 import { cn } from '@/lib/utils';
 
 export interface GenerationOverviewProps {
@@ -20,9 +21,30 @@ export function GenerationOverview({
   onHorizonChange,
   className,
 }: GenerationOverviewProps) {
+  const { configuration, forecastPoints, currentPointTimestamp } = usePlant();
+
   const data = React.useMemo(() => {
+    if (forecastPoints && forecastPoints.length > 0) {
+      const limit = horizon === '24h' ? 24 : horizon === '48h' ? 48 : 72;
+      const slicedPoints = forecastPoints.slice(0, limit);
+      const expectedEnergyMwh = Number(
+        slicedPoints.reduce((acc, p) => acc + (p.predictedMw || 0), 0).toFixed(1)
+      );
+      const peakOutputMw = Number(
+        Math.max(...slicedPoints.map((p) => p.predictedMw || 0)).toFixed(1)
+      );
+      return {
+        points: slicedPoints,
+        nowTimestamp: currentPointTimestamp || slicedPoints[0]?.timestamp,
+        metrics: {
+          expectedEnergyMwh,
+          peakOutputMw,
+          uncertaintyPercent: 7.4,
+        },
+      };
+    }
     return getAhmedabadForecastData(horizon);
-  }, [horizon]);
+  }, [horizon, forecastPoints, currentPointTimestamp]);
 
   return (
     <div
@@ -44,7 +66,7 @@ export function GenerationOverview({
             </Badge>
           </div>
           <h2 className="font-display font-bold text-lg text-foreground tracking-tight">
-            72-Hour Continuous Generation Forecast & Realized SCADA
+            72-Hour Continuous Generation Forecast &amp; Physics Baseline
           </h2>
         </div>
 
@@ -80,6 +102,7 @@ export function GenerationOverview({
           points={data.points}
           nowTimestamp={data.nowTimestamp}
           horizon={horizon}
+          capacityMw={configuration?.acCapacityMw}
           height={340}
         />
       </div>

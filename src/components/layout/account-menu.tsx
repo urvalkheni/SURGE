@@ -22,8 +22,8 @@ import {
 export function AccountMenu() {
   const { data: session } = useSession();
 
-  const userName = session?.user?.name || 'Om Mistry';
-  const userEmail = session?.user?.email || 'om.mistry@renewableiq.internal';
+  const userName = session?.user?.name || 'Operator';
+  const userEmail = session?.user?.email || '';
   const userImage = session?.user?.image;
   const userInitials = userName
     .split(' ')
@@ -32,8 +32,10 @@ export function AccountMenu() {
     .substring(0, 2)
     .toUpperCase();
 
+  const roleLabel = (session?.user as { role?: string })?.role || 'Plant Operator';
+
   async function handleSignOut() {
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ redirectTo: '/login' });
   }
 
   return (
@@ -53,12 +55,12 @@ export function AccountMenu() {
         </div>
 
         {/* User Name & Chevron (visible sm+) */}
-        <div className="hidden sm:flex flex-col text-left">
-          <span className="text-xs font-semibold text-foreground leading-none">
+        <div className="hidden sm:flex flex-col text-left max-w-[120px]">
+          <span className="text-xs font-semibold text-foreground leading-none truncate">
             {userName}
           </span>
-          <span className="text-[10px] text-muted font-mono tracking-tight leading-none mt-1">
-            Lead Operations
+          <span className="text-[10px] text-muted font-mono tracking-tight leading-none mt-1 truncate">
+            {roleLabel}
           </span>
         </div>
 
@@ -70,15 +72,15 @@ export function AccountMenu() {
         <DropdownMenuLabel className="font-normal px-2.5 py-2">
           <div className="flex flex-col space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-foreground font-display">
+              <span className="text-xs font-bold text-foreground font-display truncate mr-2">
                 {userName}
               </span>
-              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-xs bg-primary-tint text-primary-dark font-medium uppercase">
+              <span className="inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded-xs bg-primary-tint text-primary-dark font-medium uppercase shrink-0">
                 <Shield className="size-2.5" />
-                Operator
+                {roleLabel}
               </span>
             </div>
-            <span className="text-[11px] text-foreground-secondary truncate">
+            <span className="text-[11px] text-foreground-secondary truncate break-all">
               {userEmail}
             </span>
           </div>

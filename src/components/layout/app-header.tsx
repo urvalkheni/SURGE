@@ -66,7 +66,7 @@ export function AppHeader({
               <Zap className="size-4" />
             </div>
             <span className="font-display font-bold text-base tracking-tight text-foreground hidden sm:inline-block">
-              Renewable<span className="text-primary">IQ</span>
+              RenewableIQ
             </span>
           </Link>
 

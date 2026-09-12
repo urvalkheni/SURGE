@@ -109,9 +109,9 @@ export function WeatherIntelligence() {
           </div>
         </div>
 
-        <div className="h-[200px] w-full bg-[#FCFDFC] rounded-md border border-border-subtle p-2">
+        <div className="h-[200px] w-full bg-[#FCFDFC] rounded-md border border-border-subtle p-2 min-w-0">
           {mounted ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={180} debounce={50}>
               <AreaChart data={weatherCurveData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E3E8E3" strokeOpacity={0.7} />
                 <XAxis dataKey="hour" tickLine={false} axisLine={{ stroke: '#E3E8E3' }} tick={{ fill: '#66736A', fontSize: 10, fontFamily: 'monospace' }} />

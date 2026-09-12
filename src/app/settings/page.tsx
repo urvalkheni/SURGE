@@ -25,13 +25,14 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { demoPlant } from '@/data/demo-data';
+import { usePlant } from '@/contexts/plant-context';
 
 export default function SettingsPage() {
   const { data: session } = useSession();
+  const { plant, configuration, weather } = usePlant();
 
-  const userName = session?.user?.name || 'Om Mistry';
-  const userEmail = session?.user?.email || 'om.mistry@renewableiq.internal';
+  const userName = session?.user?.name || 'Operator';
+  const userEmail = session?.user?.email || '';
   const userImage = session?.user?.image;
   const userInitials = userName
     .split(' ')
@@ -40,10 +41,9 @@ export default function SettingsPage() {
     .substring(0, 2)
     .toUpperCase();
 
-  const isGoogleSession = Boolean(session?.user?.email && !session.user.email.endsWith('@renewableiq.internal'));
-  const authProvider = isGoogleSession ? 'Google OAuth' : 'Demo Operator Session (Google SSO)';
+  const authProvider = 'EMAIL / PASSWORD (CREDENTIALS)';
 
-  // Local demo notification preferences
+  // Operational notification preferences
   const [preferences, setPreferences] = React.useState({
     riskAlerts: true,
     recommendationAlerts: true,
@@ -51,11 +51,11 @@ export default function SettingsPage() {
     soundAlerts: false,
   });
 
-  const [isSaved, setIsSaved] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
 
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem('renewableiq_settings_notifications');
+      const saved = localStorage.getItem('surge_settings_notifications') || localStorage.getItem('renewableiq_settings_notifications');
       if (saved) {
         setPreferences(JSON.parse(saved));
       }
@@ -68,18 +68,32 @@ export default function SettingsPage() {
     setPreferences((prev) => {
       const updated = { ...prev, [key]: !prev[key] };
       try {
-        localStorage.setItem('renewableiq_settings_notifications', JSON.stringify(updated));
+        localStorage.setItem('surge_settings_notifications', JSON.stringify(updated));
       } catch {
         // LocalStorage fallback
       }
       return updated;
     });
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  }
+
+  function handleSavePreferences() {
+    setSaveStatus('saving');
+    setTimeout(() => {
+      try {
+        localStorage.setItem('surge_settings_notifications', JSON.stringify(preferences));
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2500);
+      } catch {
+        setSaveStatus('failed');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    }, 350);
   }
 
   async function handleSignOut() {
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ redirectTo: '/login' });
   }
 
   const configuredApiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || null;
@@ -95,29 +109,33 @@ export default function SettingsPage() {
             { label: 'Settings' },
           ]}
           actions={
-            <div className="flex items-center gap-2">
-              {isSaved && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-mono text-muted bg-[#F8FAF8] px-2 py-1 rounded border border-border-subtle hidden sm:inline-block">
+                LOCAL DEMO PREFERENCE
+              </span>
+              {saveStatus === 'saved' && (
                 <span className="text-xs text-primary font-semibold flex items-center gap-1 animate-in fade-in-0">
                   <Check className="size-3.5" />
                   <span>Preferences saved</span>
                 </span>
               )}
+              {saveStatus === 'failed' && (
+                <span className="text-xs text-critical font-semibold flex items-center gap-1 animate-in fade-in-0">
+                  <AlertTriangle className="size-3.5" />
+                  <span>Failed to save</span>
+                </span>
+              )}
               <Button
                 size="sm"
                 variant="primary"
-                className="gap-1.5 h-9"
-                onClick={() => {
-                  try {
-                    localStorage.setItem('renewableiq_settings_notifications', JSON.stringify(preferences));
-                  } catch {
-                    // ignore
-                  }
-                  setIsSaved(true);
-                  setTimeout(() => setIsSaved(false), 2000);
-                }}
+                className="gap-1.5 h-9 min-h-[36px]"
+                onClick={handleSavePreferences}
+                disabled={saveStatus === 'saving'}
               >
                 <Save className="size-3.5" />
-                <span>Save Preferences</span>
+                <span>
+                  {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Save Preferences'}
+                </span>
               </Button>
             </div>
           }
@@ -201,33 +219,33 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
                   <div className="text-[11px] text-muted">Selected Plant</div>
-                  <div className="text-xs font-bold text-foreground mt-0.5">{demoPlant.name}</div>
-                  <div className="text-[10px] font-mono text-muted">Asset ID: {demoPlant.id}</div>
+                  <div className="text-xs font-bold text-foreground mt-0.5">{plant?.name || 'Renewable Solar Asset'}</div>
+                  <div className="text-[10px] font-mono text-muted">Asset ID: {plant?.id || 'PLANT-DEFAULT'}</div>
                 </div>
 
                 <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
                   <div className="text-[11px] text-muted">Capacity (AC)</div>
-                  <div className="text-xs font-mono font-bold text-foreground mt-0.5">{demoPlant.acCapacityMw} MW AC</div>
+                  <div className="text-xs font-mono font-bold text-foreground mt-0.5">{(configuration?.acCapacityMw ?? 42.0).toFixed(1)} MW AC</div>
                   <div className="text-[10px] text-muted">Interconnection Limit</div>
                 </div>
 
                 <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
                   <div className="text-[11px] text-muted">DC Nameplate Capacity</div>
-                  <div className="text-xs font-mono font-bold text-foreground mt-0.5">{demoPlant.dcCapacityMw} MW DC</div>
-                  <div className="text-[10px] text-muted">DC/AC Overbuild: 1.19×</div>
+                  <div className="text-xs font-mono font-bold text-foreground mt-0.5">{(configuration?.dcCapacityMw ?? 50.0).toFixed(1)} MW DC</div>
+                  <div className="text-[10px] text-muted">DC/AC Overbuild: {((configuration?.dcCapacityMw || 50) / (configuration?.acCapacityMw || 42)).toFixed(2)}×</div>
                 </div>
 
                 <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
                   <div className="text-[11px] text-muted">Grid Substation</div>
-                  <div className="text-xs font-mono font-bold text-foreground mt-0.5">GETCO 220kV</div>
-                  <div className="text-[10px] text-muted font-mono">{demoPlant.gridNodeId}</div>
+                  <div className="text-xs font-mono font-bold text-foreground mt-0.5">{configuration?.gridOperator || 'GETCO'} {configuration?.gridVoltageKv || 220}kV</div>
+                  <div className="text-[10px] text-muted font-mono">{configuration?.gridNode || 'GRID-INTERCONNECT-01'}</div>
                 </div>
               </div>
 
               <div className="p-3 rounded-md border border-border-subtle bg-[#FAFCFA] flex flex-wrap items-center justify-between gap-2 text-xs text-foreground-secondary">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-primary" />
-                  <span>Substation Location: <strong>{demoPlant.locationName}</strong></span>
+                  <span>Substation Location: <strong>{plant ? `${plant.city}, ${plant.state} (${plant.latitude.toFixed(4)}°N, ${plant.longitude.toFixed(4)}°E)` : 'Location Configured'}</strong></span>
                 </div>
                 <Button asChild variant="ghost" size="sm" className="h-7 text-xs text-primary hover:text-primary-dark">
                   <Link href="/plant">
@@ -341,39 +359,50 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] space-y-1.5">
-                  <div className="text-[11px] text-muted">Simulation Mode</div>
+                  <div className="text-[11px] text-muted">Weather Telemetry</div>
                   <div className="text-sm font-bold text-primary flex items-center gap-1.5">
                     <span className="size-2 rounded-full bg-primary" />
-                    <span>ON</span>
+                    <span>OPEN-METEO LIVE</span>
                   </div>
                   <div className="text-[11px] text-foreground-secondary">
-                    All generation curves and actions run in a certified safe simulator interlock.
+                    {plant ? `${plant.latitude.toFixed(4)}°N, ${plant.longitude.toFixed(4)}°E` : '23.0225°N, 72.5714°E'} · {weather?.current?.temperatureC ?? 32.4}°C · GTI {weather?.current?.gtiWm2 ?? 820} W/m²
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] space-y-1.5">
+                  <div className="text-[11px] text-muted">Generation Forecast</div>
+                  <div className="text-sm font-bold text-primary-dark flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-primary-dark" />
+                    <span>PHYSICS BASELINE</span>
+                  </div>
+                  <div className="text-[11px] text-foreground-secondary">
+                    Deterministic PV model derated for temp and clipped at AC inverter capacity
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] space-y-1.5">
                   <div className="text-[11px] text-muted">SCADA Telemetry Bus</div>
-                  <div className="text-sm font-bold text-primary-dark flex items-center gap-1.5">
-                    <Wifi className="size-3.5 text-primary" />
-                    <span>SIMULATED</span>
+                  <div className="text-sm font-bold text-muted-foreground flex items-center gap-1.5">
+                    <Wifi className="size-3.5 text-muted" />
+                    <span>NOT CONNECTED</span>
                   </div>
                   <div className="text-[11px] text-foreground-secondary font-mono">
-                    18ms synthetic latency · IEC 61850 bus emulation
+                    Inverter/RTU telemetry stream awaiting physical link
                   </div>
                 </div>
 
                 <div className="p-3.5 rounded-md border border-border-subtle bg-[#F8FAF8] space-y-1.5">
                   <div className="text-[11px] text-muted">External ML API</div>
-                  <div className="text-sm font-bold text-warning flex items-center gap-1.5">
-                    <Server className="size-3.5 text-warning" />
+                  <div className="text-sm font-bold text-amber-700 flex items-center gap-1.5">
+                    <Server className="size-3.5 text-amber-600" />
                     <span>{configuredApiUrl ? 'CONFIGURED' : 'NOT CONNECTED'}</span>
                   </div>
                   <div className="text-[11px] text-foreground-secondary">
                     {configuredApiUrl 
                       ? `Target: ${configuredApiUrl}` 
-                      : 'Deterministic demo provider active (Section 12 compliant)'}
+                      : 'Waiting for team ML/FastAPI service deployment'}
                   </div>
                 </div>
               </div>

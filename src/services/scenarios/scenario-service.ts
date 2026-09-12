@@ -32,8 +32,9 @@ export class ScenarioService implements IScenarioService {
     );
 
     // Financial impact based on clearing price
-    const financialExposureUsd = Math.round(
-      Math.abs(netEnergyDeltaMwh) * params.clearingPriceUsdMwh
+    const rate = params.clearingPriceInrMwh ?? params.clearingPriceUsdMwh ?? 0;
+    const financialExposureInr = Math.round(
+      Math.abs(netEnergyDeltaMwh) * rate
     );
 
     const rampStressIndex = Math.min(
@@ -50,7 +51,8 @@ export class ScenarioService implements IScenarioService {
       id: `SIM-${Date.now()}`,
       parameters: params,
       netEnergyDeltaMwh,
-      financialExposureUsd,
+      financialExposureInr,
+      financialExposureUsd: financialExposureInr,
       rampStressIndex,
       adjustedRecommendation,
       points,

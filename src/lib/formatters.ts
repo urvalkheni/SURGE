@@ -20,14 +20,38 @@ export function formatMwh(val: number | null | undefined): string {
 }
 
 /**
- * Formats currency in USD with commas
+ * Formats currency in Indian Rupees (INR / ₹) with standard en-IN locale
+ * Supports compact formatting (₹12.5K, ₹1.25L, ₹2.40Cr)
+ */
+export function formatINR(val: number | null | undefined, compact = false): string {
+  if (val === null || val === undefined || isNaN(val)) return '₹0';
+  const num = Math.round(val);
+  const abs = Math.abs(num);
+
+  if (compact) {
+    if (abs >= 10000000) {
+      return `₹${(num / 10000000).toFixed(2)} Cr`;
+    }
+    if (abs >= 100000) {
+      return `₹${(num / 100000).toFixed(2)} L`;
+    }
+    if (abs >= 1000) {
+      return `₹${(num / 1000).toFixed(1)} K`;
+    }
+  }
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
+/**
+ * Formats currency in INR (replaces legacy USD)
  */
 export function formatCurrency(val: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(val);
+  return formatINR(val);
 }
 
 /**

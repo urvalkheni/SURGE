@@ -16,13 +16,13 @@ export function ScheduleComparison({ data }: ScheduleComparisonProps) {
       <CardHeader className="pb-3 border-b border-border-subtle bg-[#FAFBF9]">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <CardTitle className="text-base">Day-Ahead Schedule Commitment vs AI Forecast</CardTitle>
+            <CardTitle className="text-base">Day-Ahead Schedule Commitment vs Physics Forecast</CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              SLDC Gujarat cleared day-ahead bids compared against ensemble physical forecast to isolate DSM imbalance risk
+              Cleared day-ahead schedule commitment compared against deterministic physics forecast to evaluate dispatch alignment
             </CardDescription>
           </div>
           <Badge variant="outline" className="font-mono text-xs text-[#92400E] border-[#FDE68A] bg-[#FEF3C7]">
-            SLDC Gujarat Interconnect
+            Grid Interconnect Schedule
           </Badge>
         </div>
       </CardHeader>
@@ -35,31 +35,33 @@ export function ScheduleComparison({ data }: ScheduleComparisonProps) {
             <div className="font-mono text-xl font-bold text-foreground mt-1 tabular-nums">
               {data.totalScheduleMwh} <span className="text-xs font-normal text-muted">MWh</span>
             </div>
-            <p className="text-[11px] text-foreground-secondary mt-0.5">72-Hour market clearing</p>
+            <p className="text-[11px] text-foreground-secondary mt-0.5">Selected forecast horizon</p>
           </div>
 
           <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted">RenewableIQ Forecast</span>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted">Physics Forecast Baseline</span>
             <div className="font-mono text-xl font-bold text-primary mt-1 tabular-nums">
               {data.totalForecastMwh} <span className="text-xs font-normal text-muted">MWh</span>
             </div>
-            <p className="text-[11px] text-primary mt-0.5 font-medium">+{data.netDeltaMwh} MWh net generation margin</p>
+            <p className="text-[11px] text-primary mt-0.5 font-medium">
+              {data.netDeltaMwh >= 0 ? `+${data.netDeltaMwh}` : `${data.netDeltaMwh}`} MWh net variance margin
+            </p>
           </div>
 
-          <div className="p-3 rounded-md border border-danger/30 bg-danger-tint/20">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-danger-dark">Unmitigated DSM Exposure</span>
-            <div className="font-mono text-xl font-bold text-danger-dark mt-1 tabular-nums">
-              ${data.dsmExposureUsd.toLocaleString()}
+          <div className="p-3 rounded-md border border-border-subtle bg-[#F8FAF8]">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-muted">Financial Exposure</span>
+            <div className="font-mono text-sm font-bold text-foreground mt-1">
+              Tariff Not Configured
             </div>
-            <p className="text-[11px] text-danger-dark/80 mt-0.5">₹1,24,000 without BESS dispatch</p>
+            <p className="text-[11px] text-muted mt-0.5">Configure tariff in Plant Settings</p>
           </div>
 
           <div className="p-3 rounded-md border border-[#BCE3CA] bg-[#EBF5EE]">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-primary-dark">Expected Mitigated Exposure</span>
-            <div className="font-mono text-xl font-bold text-primary-dark mt-1 tabular-nums">
-              ${data.mitigatedExposureUsd.toLocaleString()}
+            <span className="text-[11px] font-medium uppercase tracking-wider text-primary-dark">Storage Dispatch Buffer</span>
+            <div className="font-mono text-sm font-bold text-primary-dark mt-1">
+              BESS Posture Nominal
             </div>
-            <p className="text-[11px] text-primary-dark/80 mt-0.5">81% risk elimination with REC-4011</p>
+            <p className="text-[11px] text-primary-dark/80 mt-0.5">Operational headroom monitored</p>
           </div>
         </div>
 
@@ -72,17 +74,15 @@ export function ScheduleComparison({ data }: ScheduleComparisonProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display font-bold text-sm text-[#92400E]">
-                  Critical Imbalance Window Identified: {data.criticalHourWindow}
+                  Schedule Variance Window: {data.criticalHourWindow}
                 </span>
                 <Badge variant="critical" className="text-[10px] py-0">
-                  UNDER-GEN RISK
+                  DEFICIT RISK
                 </Badge>
               </div>
               <p className="text-xs text-[#92400E]/90 mt-1 leading-relaxed max-w-2xl">
-                Generation plunges to <span className="font-mono font-bold">24.1 MW</span> while scheduled cleared commitment is{' '}
-                <span className="font-mono font-bold">32.8 MW</span> (deficit of{' '}
-                <span className="font-mono font-bold text-danger">{data.criticalHourDeficitMw} MW</span>). 
-                Without active battery ramp support, plant violates CERC Regulation 5.2 ramp ceiling (-0.62 MW/min vs -0.40 limit).
+                Projected generation exhibits variance against scheduled commitment.
+                Operational ramp limits and storage headroom should be reviewed in the dispatch console to maintain grid alignment.
               </p>
             </div>
           </div>
@@ -90,7 +90,7 @@ export function ScheduleComparison({ data }: ScheduleComparisonProps) {
           <Link href="/recommendations" className="shrink-0">
             <Button size="sm" className="gap-1.5 h-9 font-medium text-xs bg-primary hover:bg-primary-dark text-white">
               <ShieldCheck className="size-3.5" />
-              <span>Review REC-4011 Dispatch</span>
+              <span>Review Dispatch Console</span>
               <ArrowRight className="size-3.5" />
             </Button>
           </Link>

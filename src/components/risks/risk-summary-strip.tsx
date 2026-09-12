@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { AlertOctagon, Layers, TrendingDown, DollarSign, ShieldAlert } from 'lucide-react';
+import { AlertOctagon, Layers, TrendingDown, ShieldAlert } from 'lucide-react';
 import { RiskLedgerData } from '@/data/demo-data';
 
 export interface RiskSummaryStripProps {
@@ -32,7 +32,7 @@ export function RiskSummaryStrip({ summary }: RiskSummaryStripProps) {
       id: 'maxRamp',
       label: 'Max Projected Ramp',
       value: summary.maxProjectedRamp,
-      subtext: `CERC Limit: ${summary.rampThreshold}`,
+      subtext: `Configured Limit: ${summary.rampThreshold}`,
       icon: TrendingDown,
       accent: 'text-danger',
       bgAccent: 'bg-danger-tint/30 border-danger/30',
@@ -41,9 +41,9 @@ export function RiskSummaryStrip({ summary }: RiskSummaryStripProps) {
     {
       id: 'exposure',
       label: 'Financial Exposure at Risk',
-      value: `$${summary.financialExposureUsd.toLocaleString()}`,
-      subtext: `${summary.financialExposureInr} DSM penalties`,
-      icon: DollarSign,
+      value: summary.financialExposureInr !== 'Tariff Not Configured' ? summary.financialExposureInr : '₹0',
+      subtext: summary.financialExposureInr !== 'Tariff Not Configured' ? 'Calculated from configured PPA tariff' : 'Tariff Not Configured',
+      icon: TrendingDown,
       accent: 'text-warning-dark',
       bgAccent: 'bg-warning-tint/30 border-warning/30',
       valueColor: 'text-foreground',
@@ -52,7 +52,7 @@ export function RiskSummaryStrip({ summary }: RiskSummaryStripProps) {
       id: 'compliance',
       label: 'Grid Compliance Risk',
       value: summary.gridComplianceStatus,
-      subtext: 'Regulation 5.2 ramp exceedance',
+      subtext: 'Ramp tolerance headroom',
       icon: ShieldAlert,
       accent: 'text-warning-dark',
       bgAccent: 'bg-warning-tint/30 border-warning/30',

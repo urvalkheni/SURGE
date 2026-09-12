@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { usePlant } from '@/contexts/plant-context';
 
 interface SidebarLink {
   title: string;
@@ -31,43 +32,56 @@ interface NavSection {
   items: SidebarLink[];
 }
 
-const navSections: NavSection[] = [
-  {
-    label: 'OPERATIONS',
-    items: [
-      { title: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: 'INTELLIGENCE',
-    items: [
-      { title: 'Forecast (72h)', href: '/forecast', icon: TrendingUp },
-      { title: 'Risk Ledger', href: '/risks', icon: AlertTriangle, badge: '2', badgeVariant: 'warning' },
-      { title: 'Recommendations', href: '/recommendations', icon: Zap, badge: '1', badgeVariant: 'critical' },
-    ],
-  },
-  {
-    label: 'ANALYSIS',
-    items: [
-      { title: 'Scenario Sandbox', href: '/scenarios', icon: SlidersHorizontal },
-    ],
-  },
-  {
-    label: 'SYSTEM',
-    items: [
-      { title: 'Plant Digital Twin', href: '/plant', icon: Sun },
-      { title: 'Operator Profile', href: '/profile', icon: User },
-      { title: 'Settings', href: '/settings', icon: Settings },
-    ],
-  },
-];
-
 export interface AppSidebarProps extends React.HTMLAttributes<HTMLElement> {
   onNavigate?: () => void;
 }
 
 export function AppSidebar({ className, onNavigate, ...props }: AppSidebarProps) {
   const pathname = usePathname();
+  const { riskCount, recommendationCount } = usePlant();
+
+  const navSections: NavSection[] = React.useMemo(() => [
+    {
+      label: 'OPERATIONS',
+      items: [
+        { title: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: 'INTELLIGENCE',
+      items: [
+        { title: 'Forecast (72h)', href: '/forecast', icon: TrendingUp },
+        {
+          title: 'Risk Ledger',
+          href: '/risks',
+          icon: AlertTriangle,
+          badge: String(riskCount),
+          badgeVariant: riskCount > 0 ? 'warning' : 'nominal',
+        },
+        {
+          title: 'Recommendations',
+          href: '/recommendations',
+          icon: Zap,
+          badge: String(recommendationCount),
+          badgeVariant: recommendationCount > 0 ? 'critical' : 'nominal',
+        },
+      ],
+    },
+    {
+      label: 'ANALYSIS',
+      items: [
+        { title: 'Scenario Sandbox', href: '/scenarios', icon: SlidersHorizontal },
+      ],
+    },
+    {
+      label: 'SYSTEM',
+      items: [
+        { title: 'Plant Digital Twin', href: '/plant', icon: Sun },
+        { title: 'Operator Profile', href: '/profile', icon: User },
+        { title: 'Settings', href: '/settings', icon: Settings },
+      ],
+    },
+  ], [riskCount, recommendationCount]);
 
   return (
     <aside
@@ -88,7 +102,7 @@ export function AppSidebar({ className, onNavigate, ...props }: AppSidebarProps)
             <Zap className="size-4" />
           </div>
           <span className="font-display font-bold text-base tracking-tight text-foreground">
-            Renewable<span className="text-primary">IQ</span>
+            RenewableIQ
           </span>
           <span className="ml-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-xs bg-[#EAEFEA] text-foreground-secondary">
             v1.0

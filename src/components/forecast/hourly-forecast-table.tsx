@@ -53,7 +53,7 @@ export function HourlyForecastTable({ points, resolution }: HourlyForecastTableP
           <div>
             <CardTitle className="text-base">Granular Forecast Telemetry Ledger</CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Hour-by-hour power projections, confidence intervals, cleared schedule deltas, and atmospheric indices
+              {resolution === '15m' ? '15-minute high-resolution' : 'Hour-by-hour'} power projections, confidence intervals, cleared schedule deltas, and atmospheric indices
             </CardDescription>
           </div>
 
@@ -149,7 +149,7 @@ export function HourlyForecastTable({ points, resolution }: HourlyForecastTableP
                       </TableCell>
 
                       <TableCell className="text-right font-mono text-xs tabular-nums text-foreground-secondary py-2.5">
-                        {row.rampRateMw15m.toFixed(2)} MW/15m
+                        {row.rampRateMw15m.toFixed(2)} {resolution === '15m' ? 'MW/15m' : 'MW/hr'}
                       </TableCell>
 
                       <TableCell className="text-xs py-2.5">

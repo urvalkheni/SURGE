@@ -3,11 +3,47 @@ import Link from 'next/link';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { usePlant } from '@/contexts/plant-context';
 import { dashboardData } from '@/data/demo-data';
 import { cn } from '@/lib/utils';
 
 export function OutlookTable({ className }: { className?: string }) {
-  const { outlookTable } = dashboardData;
+  const { forecastPoints, configuration } = usePlant();
+
+  const outlookRows = React.useMemo(() => {
+    if (forecastPoints && forecastPoints.length >= 24) {
+      const acCap = configuration?.acCapacityMw || 42.0;
+      const keyIndices = [13, 15, 17, 21, 33, 36];
+      return keyIndices.map((idx) => {
+        const point = forecastPoints[idx] || forecastPoints[idx % forecastPoints.length];
+        const date = new Date(point.timestamp);
+        const hours = date.getUTCHours().toString().padStart(2, '0');
+        const dayLabel = idx < 24 ? 'Today' : idx < 48 ? 'Tomorrow' : 'Day 3';
+        const time = `${dayLabel} ${hours}:00`;
+        const forecastMw = Number((point.predictedMw || 0).toFixed(1));
+        const utilizationPercent = Math.min(100, Math.round((forecastMw / acCap) * 100));
+        const isHighRisk = point.isRampAlert || (point.predictedMw > 0 && point.cloudCoverPercent > 70);
+        const isModRisk = point.cloudCoverPercent > 45 && !isHighRisk;
+        const riskLevel: 'LOW' | 'MODERATE' | 'HIGH' = isHighRisk ? 'HIGH' : isModRisk ? 'MODERATE' : 'LOW';
+        const action = isHighRisk
+          ? configuration?.bessEnabled
+            ? 'BESS Dispatch'
+            : 'Schedule Rebid'
+          : isModRisk
+          ? 'Monitor Node'
+          : 'None';
+        return {
+          time,
+          forecastMw,
+          utilizationPercent,
+          riskLevel,
+          action,
+          confidencePercent: Math.round(100 - (point.cloudCoverPercent * 0.15)),
+        };
+      });
+    }
+    return dashboardData.outlookTable;
+  }, [forecastPoints, configuration]);
 
   const getRiskBadge = (level: 'LOW' | 'MODERATE' | 'HIGH') => {
     switch (level) {
@@ -61,7 +97,7 @@ export function OutlookTable({ className }: { className?: string }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle tabular-nums">
-            {outlookTable.map((row) => (
+            {outlookRows.map((row) => (
               <tr key={row.time} className="hover:bg-[#FAFBF9] transition-colors">
                 <td className="py-2.5 px-3 font-semibold text-foreground">{row.time}</td>
                 <td className="py-2.5 px-3 font-bold text-primary-dark">{row.forecastMw.toFixed(1)} MW</td>
@@ -81,7 +117,7 @@ export function OutlookTable({ className }: { className?: string }) {
 
       {/* Mobile Stacked Cards (< sm) */}
       <div className="sm:hidden space-y-2">
-        {outlookTable.map((row) => (
+        {outlookRows.map((row) => (
           <div
             key={row.time}
             className="p-3 rounded-md bg-[#FAFBF9] border border-border-subtle space-y-1.5 text-xs font-mono"

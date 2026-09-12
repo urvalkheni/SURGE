@@ -203,9 +203,10 @@ export function ForecastChartPanel({ points, horizon, className }: ForecastChart
       </div>
 
       {/* Chart Canvas */}
-      <div className="w-full h-[400px] select-none">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 16, right: 16, left: -20, bottom: 4 }}>
+      <div className="w-full h-[400px] select-none min-w-0">
+        {mounted ? (
+          <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={380} debounce={50}>
+            <ComposedChart data={chartData} margin={{ top: 16, right: 16, left: -20, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E3E8E3" strokeOpacity={0.8} />
 
             <XAxis
@@ -329,6 +330,9 @@ export function ForecastChartPanel({ points, horizon, className }: ForecastChart
             )}
           </ComposedChart>
         </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full min-h-[380px] animate-pulse bg-[#FAFBF9] rounded border border-border-subtle" />
+        )}
       </div>
 
       {/* Footer Legend and Alert Indicator */}

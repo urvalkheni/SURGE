@@ -91,7 +91,7 @@ export function ActionIntelligence() {
             </div>
             <div className="font-bold text-foreground text-sm">Zero Grid Deviation</div>
             <p className="text-foreground-secondary text-[11px] leading-relaxed">
-              Eliminates frequency breach and protects an estimated $18,400 in imbalance penalties.
+              Eliminates frequency breach and protects an estimated ₹1,50,000 in imbalance penalties.
             </p>
           </div>
         </div>

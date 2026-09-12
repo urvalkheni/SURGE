@@ -23,6 +23,7 @@ export interface ForecastChartProps {
   height?: number | string;
   className?: string;
   horizon?: '24h' | '48h' | '72h';
+  capacityMw?: number;
 }
 
 interface ChartDataPoint {
@@ -48,12 +49,27 @@ export function ForecastChart({
   height = 360,
   className,
   horizon = '72h',
+  capacityMw = 42.0,
 }: ForecastChartProps) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  const yDomainMax = React.useMemo(() => {
+    const cap = capacityMw || 42.0;
+    return Math.max(Math.ceil((cap * 1.1) / 10) * 10, 10);
+  }, [capacityMw]);
+
+  const yTicks = React.useMemo(() => {
+    const step = yDomainMax <= 20 ? 5 : yDomainMax <= 60 ? 10 : 25;
+    const ticks: number[] = [];
+    for (let val = 0; val <= yDomainMax; val += step) {
+      ticks.push(val);
+    }
+    return ticks;
+  }, [yDomainMax]);
 
   // Format data for Recharts
   const chartData: ChartDataPoint[] = React.useMemo(() => {
@@ -93,9 +109,23 @@ export function ForecastChart({
     });
   }, [points, horizon]);
 
-  // Identify "NOW" x-coordinate label
+  // Identify "NOW" x-coordinate label strictly matching canonical current output
   const nowPoint = React.useMemo(() => {
-    return chartData.find((d) => d.rawTimestamp === nowTimestamp) || chartData[12] || chartData[0];
+    if (nowTimestamp) {
+      const match = chartData.find((d) => d.rawTimestamp === nowTimestamp);
+      if (match) return match;
+    }
+    const nowMs = Date.now();
+    let closest = chartData[0];
+    let minDiff = Infinity;
+    chartData.forEach((d) => {
+      const diff = Math.abs(new Date(d.rawTimestamp).getTime() - nowMs);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = d;
+      }
+    });
+    return closest || chartData[0];
   }, [chartData, nowTimestamp]);
 
   // Identify night spans for subtle background shading
@@ -146,22 +176,18 @@ export function ForecastChart({
   }
 
   return (
-    <div className={cn('w-full relative select-none', className)} style={{ height }}>
+    <div className={cn('w-full relative select-none flex flex-col', className)} style={{ height }}>
       {/* Legend & Telemetry Indicators */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs mb-3 px-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs mb-3 px-1 shrink-0">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 bg-[#0D4F32] rounded-full" />
-            <span className="font-medium text-foreground text-[11px]">Actual Telemetry</span>
-          </div>
-          <div className="flex items-center gap-1.5">
             <span className="h-0.5 w-4 border-b-2 border-dashed border-[#167A4A]" />
-            <span className="font-medium text-primary-dark text-[11px]">AI Forecast (p50)</span>
+            <span className="font-semibold text-primary-dark text-[11px]">Physics Baseline (Estimated PV Output)</span>
           </div>
           {showConfidence && (
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-4 bg-[#167A4A]/15 rounded-xs border border-[#167A4A]/30" />
-              <span className="text-foreground-secondary text-[11px]">80% Confidence Band (p10–p90)</span>
+              <span className="text-foreground-secondary text-[11px]">Uncertainty Band (p10–p90)</span>
             </div>
           )}
         </div>
@@ -171,112 +197,116 @@ export function ForecastChart({
             <span className="size-1.5 rounded-full bg-border-subtle" />
             Shaded = Night
           </span>
-          <span className="text-foreground-secondary font-medium">Cap: 42.0 MW</span>
+          <span className="text-foreground-secondary font-medium">Cap: {capacityMw.toFixed(1)} MW</span>
         </div>
       </div>
 
       {/* Main Chart Canvas */}
-      <div className="w-full h-[calc(100%-28px)]">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 12, right: 12, left: -20, bottom: 4 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              vertical={false}
-              stroke="#E3E8E3"
-              strokeOpacity={0.8}
-            />
-
-            {/* Night Shading Bands */}
-            {nightSpans.map((span, idx) => (
-              <ReferenceArea
-                key={`night-${idx}`}
-                x1={span.start}
-                x2={span.end}
-                fill="#17211B"
-                fillOpacity={0.035}
-              />
-            ))}
-
-            <XAxis
-              dataKey="timeLabel"
-              interval={xAxisInterval}
-              tickLine={false}
-              axisLine={{ stroke: '#E3E8E3' }}
-              tick={{ fill: '#66736A', fontSize: 11, fontFamily: 'monospace' }}
-            />
-
-            <YAxis
-              domain={[0, 45]}
-              ticks={[0, 10, 20, 30, 40]}
-              tickLine={false}
-              axisLine={{ stroke: '#E3E8E3' }}
-              tick={{ fill: '#66736A', fontSize: 11, fontFamily: 'monospace' }}
-              unit=" MW"
-            />
-
-            <Tooltip
-              content={<CustomTooltip />}
-              cursor={{ stroke: '#66736A', strokeWidth: 1, strokeDasharray: '2 2' }}
-            />
-
-            {/* NOW Vertical Reference Line */}
-            {nowPoint && (
-              <ReferenceLine
-                x={nowPoint.timeLabel}
-                stroke="#17211B"
-                strokeWidth={1.5}
+      <div className="w-full flex-1 min-h-[220px] min-w-0">
+        {mounted ? (
+          <ResponsiveContainer width="100%" height="100%" minWidth={100} minHeight={220} debounce={50}>
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 12, right: 12, left: -20, bottom: 4 }}
+            >
+              <CartesianGrid
                 strokeDasharray="3 3"
+                vertical={false}
+                stroke="#E3E8E3"
+                strokeOpacity={0.8}
+              />
+
+              {/* Night Shading Bands */}
+              {nightSpans.map((span, idx) => (
+                <ReferenceArea
+                  key={`night-${idx}`}
+                  x1={span.start}
+                  x2={span.end}
+                  fill="#17211B"
+                  fillOpacity={0.035}
+                />
+              ))}
+
+              {/* Grid Interconnect Capacity Limit Line */}
+              <ReferenceLine
+                y={capacityMw}
+                stroke="#66736A"
+                strokeDasharray="4 4"
+                strokeWidth={1}
                 label={{
-                  value: 'NOW (12:00)',
-                  position: 'insideTopLeft',
-                  fill: '#17211B',
-                  fontSize: 10,
-                  fontWeight: 700,
+                  value: `${capacityMw} MW RATED`,
+                  position: 'insideTopRight',
+                  fill: '#66736A',
+                  fontSize: 9,
                   fontFamily: 'monospace',
                 }}
               />
-            )}
 
-            {/* Confidence Envelope (Between p10 and p90) */}
-            {showConfidence && (
-              <Area
+              {/* NOW Vertical Reference Line */}
+              {nowPoint && (
+                <ReferenceLine
+                  x={nowPoint.timeLabel}
+                  stroke="#E05252"
+                  strokeWidth={1.5}
+                  strokeDasharray="3 3"
+                  label={{
+                    value: `NOW · ${nowPoint.predictedMw.toFixed(1)} MW`,
+                    position: 'insideTopLeft',
+                    fill: '#E05252',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    fontFamily: 'monospace',
+                  }}
+                />
+              )}
+
+              <XAxis
+                dataKey="timeLabel"
+                interval={xAxisInterval}
+                tickLine={false}
+                axisLine={{ stroke: '#E3E8E3' }}
+                tick={{ fill: '#66736A', fontSize: 10, fontFamily: 'monospace' }}
+              />
+
+              <YAxis
+                domain={[0, yDomainMax]}
+                ticks={yTicks}
+                tickLine={false}
+                axisLine={{ stroke: '#E3E8E3' }}
+                tick={{ fill: '#66736A', fontSize: 10, fontFamily: 'monospace' }}
+                unit=" MW"
+              />
+
+              <Tooltip content={<CustomTooltip />} />
+
+              {/* 80% Confidence Interval Band (p10–p90) */}
+              {showConfidence && (
+                <Area
+                  type="monotone"
+                  dataKey="confidenceRange"
+                  stroke="none"
+                  fill="#167A4A"
+                  fillOpacity={0.12}
+                  isAnimationActive={false}
+                />
+              )}
+
+              {/* Physics Baseline / Model Prediction (p50) */}
+              <Line
                 type="monotone"
-                dataKey="confidenceRange"
-                stroke="none"
-                fill="#167A4A"
-                fillOpacity={0.12}
+                dataKey="predictedMw"
+                stroke="#167A4A"
+                strokeWidth={2}
+                strokeDasharray="4 3"
+                dot={false}
+                activeDot={{ r: 4, fill: '#167A4A', stroke: '#FFFFFF', strokeWidth: 1.5 }}
                 isAnimationActive={false}
               />
-            )}
-
-            {/* AI Predicted Line */}
-            <Line
-              type="monotone"
-              dataKey="predictedMw"
-              stroke="#167A4A"
-              strokeWidth={2}
-              strokeDasharray="4 4"
-              dot={false}
-              activeDot={{ r: 4, fill: '#167A4A', stroke: '#FFFFFF', strokeWidth: 2 }}
-              isAnimationActive={false}
-            />
-
-            {/* Historical Actual Generation Line */}
-            <Line
-              type="monotone"
-              dataKey="actualMw"
-              stroke="#0D4F32"
-              strokeWidth={2.5}
-              dot={false}
-              activeDot={{ r: 5, fill: '#0D4F32', stroke: '#FFFFFF', strokeWidth: 2 }}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+            </ComposedChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="w-full h-full min-h-[220px] animate-pulse bg-[#FAFBF9] rounded border border-border-subtle" />
+        )}
       </div>
     </div>
   );
@@ -295,7 +325,6 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
   if (!active || !payload || !payload.length) return null;
 
   const data = payload[0].payload;
-  const isHistorical = data.actualMw !== null;
 
   return (
     <div className="bg-surface/95 backdrop-blur-xs border border-border shadow-modal rounded-md p-3 text-xs min-w-[210px] space-y-2 z-50">
@@ -303,33 +332,19 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
         <span className="font-mono font-semibold text-foreground text-[11px]">
           {data.fullDateLabel}
         </span>
-        <span
-          className={cn(
-            'px-1.5 py-0.2 rounded-2xs text-[9px] font-bold uppercase tracking-wider',
-            isHistorical
-              ? 'bg-[#EAEFEA] text-foreground'
-              : 'bg-primary-tint text-primary-dark'
-          )}
-        >
-          {isHistorical ? 'Historical' : 'Forecast'}
+        <span className="px-1.5 py-0.5 rounded-2xs text-[9px] font-bold uppercase tracking-wider bg-primary-tint text-primary-dark">
+          PHYSICS BASELINE
         </span>
       </div>
 
       <div className="space-y-1.5 font-mono tabular-nums">
-        {data.actualMw !== null && (
-          <div className="flex items-center justify-between text-[#0D4F32] font-semibold">
-            <span className="text-[11px]">Actual Telemetry:</span>
-            <span className="text-xs">{data.actualMw.toFixed(1)} MW</span>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between text-primary-dark font-medium">
-          <span className="text-[11px]">Ensemble p50:</span>
+        <div className="flex items-center justify-between text-primary-dark font-semibold">
+          <span className="text-[11px]">Estimated Output:</span>
           <span className="text-xs">{data.predictedMw.toFixed(1)} MW</span>
         </div>
 
         <div className="flex items-center justify-between text-foreground-secondary">
-          <span className="text-[11px]">Confidence (p10–p90):</span>
+          <span className="text-[11px]">Uncertainty (p10–p90):</span>
           <span className="text-[11px]">
             {data.p10Mw.toFixed(1)} – {data.p90Mw.toFixed(1)} MW
           </span>

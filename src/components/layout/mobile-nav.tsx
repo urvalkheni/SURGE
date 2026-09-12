@@ -14,8 +14,8 @@ export interface MobileNavProps {
 
 export function MobileNav({ isOpen, onClose }: MobileNavProps) {
   const { data: session } = useSession();
-  const userName = session?.user?.name || 'Om Mistry';
-  const userEmail = session?.user?.email || 'om.mistry@renewableiq.internal';
+  const userName = session?.user?.name || 'Operator';
+  const userEmail = session?.user?.email || '';
   const userImage = session?.user?.image;
   const userInitials = userName
     .split(' ')
@@ -51,7 +51,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
 
   async function handleSignOut() {
     onClose();
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ redirectTo: '/login' });
   }
 
   return (

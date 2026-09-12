@@ -5,12 +5,53 @@ import Link from 'next/link';
 import { BatteryCharging, ArrowRight, ShieldCheck, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { dashboardData } from '@/data/demo-data';
+import { usePlant } from '@/contexts/plant-context';
 import { cn } from '@/lib/utils';
 
 export function RecommendationCard({ className }: { className?: string }) {
-  const { activeRecommendation } = dashboardData;
+  const { recommendations, configuration } = usePlant();
+  const plantRec = recommendations && recommendations.length > 0 ? recommendations[0] : null;
   const [isReviewed, setIsReviewed] = React.useState(false);
+
+  if (!plantRec) {
+    return (
+      <div
+        className={cn(
+          'w-full bg-surface border border-border rounded-lg shadow-card p-5 space-y-3 select-none',
+          className
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-border pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="size-4 text-primary" />
+            <h3 className="font-display font-bold text-sm text-foreground">
+              Prescriptive Dispatch Status
+            </h3>
+            <Badge variant="nominal" className="text-[9px] font-mono px-1.5 py-0">
+              NOMINAL OPERATION
+            </Badge>
+          </div>
+          <span className="text-xs font-mono text-muted">Zero Active Prescriptions</span>
+        </div>
+        <p className="text-xs text-foreground-secondary leading-relaxed">
+          Asset operating within nominal envelope. Deterministic physics models indicate all parameters conform to configured tolerances ({configuration?.rampLimitMwPerMin || 2.5} MW/min limit).
+        </p>
+        <div className="pt-2 flex justify-end">
+          <Link href="/recommendations">
+            <Button variant="ghost" size="sm" className="gap-1.5 font-medium text-primary hover:text-primary-dark h-8 text-xs">
+              <span>View Prescriptive Workstation</span>
+              <ArrowRight className="size-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const tariffConfigured = (configuration?.energyPricePerMwh ?? 0) > 0;
+  const savingsText = tariffConfigured
+    ? `$${Math.round((plantRec.dispatchPlan?.setpointMw || 10) * (configuration?.energyPricePerMwh ?? 0)).toLocaleString()} Protected`
+    : 'Tariff Unconfigured';
 
   return (
     <div
@@ -26,13 +67,13 @@ export function RecommendationCard({ className }: { className?: string }) {
           <h3 className="font-display font-bold text-sm text-foreground">
             Prescriptive Dispatch Recommendation
           </h3>
-          <Badge variant="critical" className="text-[9px] font-mono px-1.5 py-0">
-            {activeRecommendation.priority} PRIORITY
+          <Badge variant={plantRec.priority === 'urgent' ? 'critical' : 'warning'} className="text-[9px] font-mono px-1.5 py-0 uppercase">
+            {plantRec.priority} PRIORITY
           </Badge>
         </div>
 
         <Badge variant="outline" className="self-start sm:self-auto text-[9px] font-mono text-muted">
-          {activeRecommendation.status}
+          READY FOR DISPATCH
         </Badge>
       </div>
 
@@ -44,9 +85,9 @@ export function RecommendationCard({ className }: { className?: string }) {
             <AlertTriangle className="size-3" />
             <span>01. RISK DETECTED</span>
           </div>
-          <div className="font-bold text-foreground text-xs">{activeRecommendation.riskSummary}</div>
-          <p className="text-[11px] text-foreground-secondary leading-tight">
-            Anticipated 8.7 MW drop violates CAISO/PJM ramp tolerances.
+          <div className="font-bold text-foreground text-xs line-clamp-2">{plantRec.title}</div>
+          <p className="text-[11px] text-foreground-secondary leading-tight line-clamp-2">
+            {plantRec.riskSummary}
           </p>
         </div>
 
@@ -56,9 +97,9 @@ export function RecommendationCard({ className }: { className?: string }) {
             <Clock className="size-3" />
             <span>02. ROOT CAUSE</span>
           </div>
-          <div className="font-bold text-foreground text-xs">Cloud Optical Surge</div>
-          <p className="text-[11px] text-foreground-secondary leading-tight">
-            {activeRecommendation.rootCause}.
+          <div className="font-bold text-foreground text-xs">Physics Atmospheric Influx</div>
+          <p className="text-[11px] text-foreground-secondary leading-tight line-clamp-2">
+            {plantRec.rootCause}
           </p>
         </div>
 
@@ -68,9 +109,9 @@ export function RecommendationCard({ className }: { className?: string }) {
             <BatteryCharging className="size-3" />
             <span>03. PRESCRIBED ACTION</span>
           </div>
-          <div className="font-bold text-primary-dark text-xs">{activeRecommendation.action}</div>
+          <div className="font-bold text-primary-dark text-xs line-clamp-1">{plantRec.prescribedAction}</div>
           <p className="text-[11px] text-foreground-secondary leading-tight">
-            Dispatch {activeRecommendation.targetAsset} at {activeRecommendation.setpointMw} MW.
+            Target: {plantRec.dispatchPlan?.targetAsset || 'Array Controller'}
           </p>
         </div>
 
@@ -80,16 +121,16 @@ export function RecommendationCard({ className }: { className?: string }) {
             <ShieldCheck className="size-3 text-primary" />
             <span>04. AVOIDED IMPACT</span>
           </div>
-          <div className="font-bold text-foreground text-xs">${activeRecommendation.estimatedSavingsUsd.toLocaleString()} Saved</div>
-          <p className="text-[11px] text-foreground-secondary leading-tight">
-            {activeRecommendation.expectedImpact}.
+          <div className="font-bold text-foreground text-xs">{savingsText}</div>
+          <p className="text-[11px] text-foreground-secondary leading-tight line-clamp-2">
+            {plantRec.expectedImpact}
           </p>
         </div>
       </div>
 
       {/* Action Review Confirmation Drawer / Controls */}
       <div className="pt-2 border-t border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant={isReviewed ? 'outline' : 'primary'}
@@ -99,15 +140,15 @@ export function RecommendationCard({ className }: { className?: string }) {
             {isReviewed ? (
               <>
                 <CheckCircle2 className="size-3.5 text-primary" />
-                <span>Reviewed & Armed (Simulation)</span>
+                <span>SIMULATED ACTION ARMED</span>
               </>
             ) : (
-              <span>Review & Arm Dispatch</span>
+              <span>SIMULATE DISPATCH</span>
             )}
           </Button>
 
           <span className="text-[11px] text-muted">
-            Lead time: {activeRecommendation.responseWindowMinutes} min · Confidence: {activeRecommendation.confidencePercent}%
+            Duration: {plantRec.dispatchPlan?.durationMinutes || 45} min · Efficacy: {plantRec.frequencyProtectionScore || 92}%
           </span>
         </div>
 
