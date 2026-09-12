@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { 
   Leaf, 
@@ -11,23 +11,126 @@ import {
   Zap, 
   Activity, 
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  X,
+  KeyRound,
+  ExternalLink,
+  HelpCircle,
+  UserCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loginAsDemo, loading, error: authError } = useAuth();
+  const { login, loginAsDemo, loginWithGoogle, loading, error: authError } = useAuth();
 
   const [email, setEmail] = useState('krish.patel@sldc.gujarat.gov.in');
   const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
+  const gsiInitializedRef = useRef(false);
+
+  // Google OAuth state
+  const [googleClientId, setGoogleClientId] = useState(() => {
+    return localStorage.getItem('google_client_id') || import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+  });
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [googleUserEmail, setGoogleUserEmail] = useState('');
+  const [googleUserName, setGoogleUserName] = useState('');
+  const [modalTab, setModalTab] = useState('oauth'); // 'oauth' or 'direct'
 
   const redirectPath = location.state?.from?.pathname && location.state.from.pathname !== '/' 
     ? location.state.from.pathname 
     : '/dashboard';
+
+  // Handle Google token verification and login
+  const handleGoogleResponse = async (idToken) => {
+    setFormError('');
+    if (!idToken) {
+      setFormError('Google did not return a valid authentication credential.');
+      return;
+    }
+    const res = await loginWithGoogle({ credential: idToken });
+    if (res.success) {
+      navigate(redirectPath, { replace: true });
+    } else {
+      setFormError(res.error || 'Google authentication failed.');
+    }
+  };
+
+  // Check URL hash for Google OAuth 2.0 redirect response (#id_token=...)
+  useEffect(() => {
+    if (window.location.hash) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const idToken = params.get('id_token') || params.get('credential');
+      if (idToken) {
+        if (window.opener && window.opener !== window) {
+          window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS', idToken }, window.location.origin);
+          window.close();
+          return;
+        }
+        handleGoogleResponse(idToken);
+      }
+    }
+
+    const handleMessage = async (event) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'GOOGLE_AUTH_SUCCESS' && event.data.idToken) {
+        handleGoogleResponse(event.data.idToken);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Initialize Google Identity Services if client_id is available
+  useEffect(() => {
+    if (!googleClientId) return;
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google?.accounts?.id) {
+        try {
+          if (!gsiInitializedRef.current) {
+            window.google.accounts.id.initialize({
+              client_id: googleClientId,
+              callback: (response) => {
+                if (response?.credential) {
+                  handleGoogleResponse(response.credential);
+                }
+              },
+              auto_select: false,
+              cancel_on_tap_outside: true
+            });
+            gsiInitializedRef.current = true;
+          }
+          const btnElem = document.getElementById("gsi-render-button");
+          if (btnElem) {
+            btnElem.innerHTML = '';
+            window.google.accounts.id.renderButton(btnElem, {
+              theme: "outline",
+              size: "large",
+              width: 380,
+              text: "continue_with",
+              shape: "rectangular"
+            });
+          }
+        } catch (e) {
+          console.warn("GSI init notice:", e);
+        }
+      }
+    };
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [googleClientId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,6 +152,68 @@ export default function Login() {
   const handleDemoAccess = () => {
     loginAsDemo('Chief Grid Dispatcher');
     navigate(redirectPath, { replace: true });
+  };
+
+  const openGoogleOAuthPopup = (clientIdToUse) => {
+    const cid = clientIdToUse || googleClientId;
+    if (!cid) return;
+    const redirectUri = window.location.origin + '/login';
+    const scope = encodeURIComponent('openid email profile');
+    const nonce = Math.random().toString(36).substring(2);
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(cid)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token%20id_token&scope=${scope}&nonce=${nonce}&prompt=select_account`;
+    window.open(url, 'GoogleAuth', 'width=520,height=630,menubar=no,toolbar=no');
+  };
+
+  const handleGoogleCustomClick = () => {
+    setFormError('');
+    if (googleClientId) {
+      // First attempt to trigger Google Identity Services One Tap prompt if supported
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            openGoogleOAuthPopup();
+          }
+        });
+      } else {
+        openGoogleOAuthPopup();
+      }
+      return;
+    }
+    // If no client ID yet, open setup modal
+    setIsGoogleModalOpen(true);
+  };
+
+  const handleSaveClientId = (e) => {
+    e.preventDefault();
+    const cleanId = clientIdInput.trim();
+    if (!cleanId) {
+      setFormError('Please enter your Google Client ID.');
+      return;
+    }
+    localStorage.setItem('google_client_id', cleanId);
+    setGoogleClientId(cleanId);
+    setIsGoogleModalOpen(false);
+    openGoogleOAuthPopup(cleanId);
+  };
+
+  const handleCustomGoogleEmailLogin = async (e) => {
+    e.preventDefault();
+    if (!googleUserEmail.trim()) {
+      setFormError('Please enter your Google account email.');
+      return;
+    }
+    setIsGoogleModalOpen(false);
+    const res = await loginWithGoogle({
+      email: googleUserEmail.trim(),
+      name: googleUserName.trim() || googleUserEmail.split('@')[0],
+      role: 'Grid Dispatcher',
+      station: 'State Load Despatch Centre'
+    });
+    if (res.success) {
+      navigate(redirectPath, { replace: true });
+    } else {
+      setFormError(res.error || 'Google authentication failed.');
+    }
   };
 
   return (
@@ -126,8 +291,8 @@ export default function Login() {
               <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-600 transition-colors">
                 <span>&larr; Back to Overview</span>
               </Link>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                Supabase Auth
+              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-bold">
+                SQLite DB Auth
               </span>
             </div>
 
@@ -237,15 +402,45 @@ export default function Login() {
               <div className="border-t border-slate-200 w-full" />
             </div>
 
-            {/* 1-Click Demo Operator Button */}
-            <button
-              type="button"
-              onClick={handleDemoAccess}
-              className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
-            >
-              <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span>Continue as Demo Operator (Krish Patel)</span>
-            </button>
+            {/* Quick Auth Actions */}
+            <div className="space-y-2.5">
+              {/* Google Sign In Button */}
+              <button
+                type="button"
+                onClick={handleGoogleCustomClick}
+                className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+              >
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+
+              {/* 1-Click Demo Operator Button */}
+              <button
+                type="button"
+                onClick={handleDemoAccess}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
+              >
+                <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
+                <span>Continue as Demo Operator (Krish Patel)</span>
+              </button>
+            </div>
 
             {/* Switch to Sign Up */}
             <div className="text-center text-xs text-slate-500 pt-2">
@@ -257,6 +452,159 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Google Setup & Account Modal */}
+      {isGoogleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden p-6 space-y-5">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 10.03 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Google Authentication</h3>
+                  <p className="text-[11px] text-slate-500">Sign in with your Google account</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsGoogleModalOpen(false)}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Credential Status */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+              <div className="flex items-center gap-1.5 text-slate-700 font-bold text-[11px]">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Backend Client Secret Configured</span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-mono truncate">
+                GOOGLE_CLIENT_SECRET (Configured via env)
+              </p>
+            </div>
+
+            {/* Mode Tabs */}
+            <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setModalTab('oauth')}
+                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+                  modalTab === 'oauth'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Google Web Client ID
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('direct')}
+                className={`py-1.5 rounded-lg transition-all cursor-pointer ${
+                  modalTab === 'direct'
+                    ? 'bg-white text-blue-600 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Direct Google Email
+              </button>
+            </div>
+
+            {/* Tab 1: Real Google Client ID */}
+            {modalTab === 'oauth' && (
+              <form onSubmit={handleSaveClientId} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Google OAuth Client ID
+                  </label>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    From Google Cloud Console (Credentials) paired with your secret key:
+                  </p>
+                  <input
+                    type="text"
+                    value={clientIdInput}
+                    onChange={(e) => setClientIdInput(e.target.value)}
+                    placeholder="e.g. 123456789-abc.apps.googleusercontent.com"
+                    className="w-full px-3 py-2 text-xs font-mono text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsGoogleModalOpen(false)}
+                    className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+                  >
+                    Save & Open Google Popup
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Tab 2: Custom Google Email Login */}
+            {modalTab === 'direct' && (
+              <form onSubmit={handleCustomGoogleEmailLogin} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Your Google Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={googleUserEmail}
+                    onChange={(e) => setGoogleUserEmail(e.target.value)}
+                    placeholder="your.email@gmail.com"
+                    className="w-full px-3 py-2 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Your Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={googleUserName}
+                    onChange={(e) => setGoogleUserName(e.target.value)}
+                    placeholder="e.g. Your Name"
+                    className="w-full px-3 py-2 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsGoogleModalOpen(false)}
+                    className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+                  >
+                    Sign In as this User
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

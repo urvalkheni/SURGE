@@ -111,25 +111,11 @@ export const supabase = {
 
         return { success: true, user: userPayload, session: data.session };
       }
+      return { success: false, error: 'SUPABASE_ANON_KEY_NOT_CONFIGURED' };
     } catch (err) {
-      console.warn('Supabase remote signUp failed, falling back to local operator session:', err.message);
-      // If error is actual invalid credential format, rethrow
-      if (err.message.includes('Password') || err.message.includes('email')) {
-        return { success: false, error: err.message };
-      }
+      console.warn('Supabase remote signUp failed:', err.message);
+      return { success: false, error: err.message };
     }
-
-    // Local resilient signup fallback (stores in localStorage)
-    const localUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      name: metadata.name || normalizedEmail.split('@')[0],
-      email: normalizedEmail,
-      role: metadata.role || 'Grid Operator',
-      station: metadata.station || 'National Load Despatch Centre',
-      token: `local_token_${Date.now()}`
-    };
-    setStoredSession({ access_token: localUser.token }, localUser);
-    return { success: true, user: localUser };
   },
 
   /**
@@ -172,22 +158,11 @@ export const supabase = {
         setStoredSession(data, userPayload);
         return { success: true, user: userPayload, session: data };
       }
+      return { success: false, error: 'SUPABASE_ANON_KEY_NOT_CONFIGURED' };
     } catch (err) {
       console.warn('Supabase remote signIn failed:', err.message);
       return { success: false, error: err.message || 'Invalid operator credentials.' };
     }
-
-    // Fallback if no anon key is set yet: allow demo login
-    const fallbackUser = {
-      id: `usr-${Date.now().toString(36)}`,
-      name: normalizedEmail.split('@')[0],
-      email: normalizedEmail,
-      role: 'Grid Operator',
-      station: 'State Load Despatch Centre',
-      token: `local_token_${Date.now()}`
-    };
-    setStoredSession({ access_token: fallbackUser.token }, fallbackUser);
-    return { success: true, user: fallbackUser };
   },
 
   /**
@@ -203,6 +178,31 @@ export const supabase = {
     }
     setStoredSession(null, null);
     return { success: true };
+  },
+
+  /**
+   * Synchronize operator profile to Supabase public.profiles table
+   */
+  async syncProfile(profileData) {
+    if (!SUPABASE_ANON_KEY || !profileData?.email) return null;
+    try {
+      return await supabaseFetch('/rest/v1/profiles', {
+        method: 'POST',
+        headers: {
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          email: profileData.email.trim().toLowerCase(),
+          full_name: profileData.name || profileData.full_name || 'Grid Operator',
+          role: profileData.role || 'Chief Grid Dispatcher',
+          station: profileData.station || 'Gujarat SLDC - Gotri, Vadodara',
+          updated_at: new Date().toISOString()
+        })
+      });
+    } catch (err) {
+      console.warn('Could not sync profile to Supabase public.profiles table:', err.message);
+      return null;
+    }
   },
 
   /**
@@ -230,3 +230,4 @@ export const supabase = {
     return null;
   }
 };
+

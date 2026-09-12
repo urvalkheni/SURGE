@@ -141,3 +141,145 @@ export const fetchMetrics = async (state = null) => {
     return { data: MOCK_METRICS, isLive: false };
   }
 };
+
+export const executeDispatch = async (dispatchData, role = 'chief_grid_dispatcher') => {
+  try {
+    const res = await client.post('/dispatch/execute', {
+      ...dispatchData,
+      operator_role: role
+    }, {
+      headers: {
+        'X-User-Role': role
+      }
+    });
+    return { success: true, data: res.data };
+  } catch (err) {
+    if (err.response?.status === 403) {
+      return { 
+        success: false, 
+        status: 403, 
+        message: err.response.data?.detail || "HTTP 403 Forbidden: Role not authorized for physical grid control." 
+      };
+    }
+    return { success: false, message: err.message };
+  }
+};
+
+export const dispatchBattery = async (batteryData, role = 'chief_grid_dispatcher') => {
+  try {
+    const res = await client.post('/battery/dispatch', {
+      ...batteryData,
+      user_role: role
+    }, {
+      headers: {
+        'X-User-Role': role
+      }
+    });
+    return { success: true, data: res.data };
+  } catch (err) {
+    if (err.response?.status === 403) {
+      return { 
+        success: false, 
+        status: 403, 
+        message: err.response.data?.detail || "HTTP 403 Forbidden: Role not authorized for physical battery control." 
+      };
+    }
+    return { success: false, message: err.message };
+  }
+};
+
+// Resilient helpers that fall back directly to backend server if proxy is unreachable
+const postWithFallback = async (path, data, config = {}) => {
+  try {
+    return await client.post(path, data, config);
+  } catch (err) {
+    if (err.response) throw err;
+    if (!BASE_URL && (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error') || !err.status)) {
+      return await axios.post(`http://127.0.0.1:8000${path}`, data, { ...config, timeout: 5000 });
+    }
+    throw err;
+  }
+};
+
+const getWithFallback = async (path, config = {}) => {
+  try {
+    return await client.get(path, config);
+  } catch (err) {
+    if (err.response) throw err;
+    if (!BASE_URL && (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error') || !err.status)) {
+      return await axios.get(`http://127.0.0.1:8000${path}`, { ...config, timeout: 5000 });
+    }
+    throw err;
+  }
+};
+
+export const apiSignup = async ({ name, email, password, role, station }) => {
+  try {
+    const res = await postWithFallback('/auth/signup', {
+      name,
+      email,
+      password,
+      role: role || 'Chief Grid Dispatcher',
+      station: station || 'Gujarat SLDC - Gotri, Vadodara'
+    });
+    return { success: true, data: res.data };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.response?.data?.detail || err.message || 'Failed to register account in database.'
+    };
+  }
+};
+
+export const apiLogin = async (email, password) => {
+  try {
+    const res = await postWithFallback('/auth/login', { email, password });
+    return { success: true, data: res.data };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.response?.data?.detail || err.message || 'Authentication failed.'
+    };
+  }
+};
+
+export const apiGoogleAuth = async (googlePayload) => {
+  try {
+    const res = await postWithFallback('/auth/google', googlePayload);
+    return { success: true, data: res.data };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.response?.data?.detail || err.message || 'Google authentication failed.'
+    };
+  }
+};
+
+export const saveUserProfile = async (profileData) => {
+  try {
+    const res = await postWithFallback('/auth/profile', {
+      email: profileData.email,
+      name: profileData.name,
+      role: profileData.role,
+      station: profileData.station
+    });
+    return { success: true, data: res.data };
+  } catch (err) {
+    return { 
+      success: false, 
+      message: err.response?.data?.detail || err.message 
+    };
+  }
+};
+
+export const fetchUserProfile = async (email) => {
+  try {
+    const res = await getWithFallback(`/auth/profile?email=${encodeURIComponent(email)}`);
+    return { success: true, data: res.data };
+  } catch (err) {
+    return { 
+      success: false, 
+      message: err.response?.data?.detail || err.message 
+    };
+  }
+};

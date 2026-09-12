@@ -14,17 +14,30 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   Zap,
-  User
+  User,
+  Shield,
+  Factory,
+  Globe,
+  Menu
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
 import DispatchActionModal from "../command/DispatchActionModal";
 import AuditTrailModal from "../command/AuditTrailModal";
+import GlobalSearchModal from "../search/GlobalSearchModal";
 
 export default function Header() {
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { 
+    user, 
+    logout, 
+    isAuthenticated, 
+    activeRoleId, 
+    roleConfig, 
+    switchRole, 
+    canControl 
+  } = useAuth();
   const { 
     selectedState, 
     setSelectedState, 
@@ -42,17 +55,34 @@ export default function Header() {
     lastUpdated,
     settings,
     activeAlertsCount,
-    isLiveConnected
+    isLiveConnected,
+    assignedPlantId,
+    setAssignedPlantId,
+    assignedPlant,
+    toggleMobileSidebar
   } = useApp();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isDispatchModalOpen, setIsDispatchModalOpen] = useState(false);
   const [isAuditTrailOpen, setIsAuditTrailOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Global ⌘K / Ctrl+K keyboard shortcut to open search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key?.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const currentCityObj = availableCities.find(c => c.id === selectedCity);
@@ -99,36 +129,67 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-slate-200 select-none z-30 sticky top-0 shrink-0 w-full">
       {/* Tier 1: Brand, Search, Status & Profile */}
-      <div className="px-5 py-2.5 flex items-center justify-between gap-4 border-b border-slate-100">
-        {/* Brand Logo & Name */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0 hover:opacity-85 transition-opacity cursor-pointer" title="Go to Overview">
-          <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-            <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <div className="text-base font-extrabold tracking-tight text-slate-900 font-sans leading-none flex items-center gap-1.5">
-              <span>SURGE</span>
-            </div>
-            <p className="text-[10px] text-slate-400 font-sans tracking-tight mt-0.5">
-              Forecast the Grid. Before the Gap.
-            </p>
-          </div>
-        </Link>
+      <div className="px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 sm:gap-4 border-b border-slate-100">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Mobile Sidebar Hamburger Toggle */}
+          <button
+            type="button"
+            onClick={toggleMobileSidebar}
+            className="md:hidden p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Toggle navigation menu"
+            title="Toggle navigation drawer"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        {/* Search Bar */}
-        <div className="hidden md:flex items-center flex-1 max-w-md mx-6">
+          {/* Brand Logo & Name */}
+          <Link to="/dashboard" className="flex items-center gap-2.5 shrink-0 hover:opacity-85 transition-opacity cursor-pointer" title="Go to Command Center">
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+              <img src="/surge-icon.png" alt="SURGE" className="w-full h-full object-contain" />
+            </div>
+            <div>
+              <div className="text-base font-extrabold tracking-tight text-slate-900 font-sans leading-none flex items-center gap-1.5">
+                <span>SURGE</span>
+              </div>
+              <p className="text-[10px] text-slate-400 font-sans tracking-tight mt-0.5">
+                Forecast the Grid. Before the Gap.
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        {/* Search Bar (Global Command Palette) */}
+        <div 
+          onClick={() => setIsSearchOpen(true)}
+          className="hidden md:flex items-center flex-1 max-w-sm mx-4 cursor-pointer group"
+          title="Open Global Search (⌘K)"
+        >
           <div className="relative w-full">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors" />
             <input 
               type="text"
-              placeholder="Search plants, locations, alerts..."
-              className="w-full pl-9 pr-14 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-xs text-slate-800 placeholder-slate-400 rounded-lg border border-slate-200 focus:border-blue-500 focus:outline-none transition-all"
+              readOnly
+              onClick={() => setIsSearchOpen(true)}
+              placeholder="Search plants, locations, alerts... (⌘K)"
+              className="w-full pl-9 pr-14 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-xs text-slate-800 placeholder-slate-400 rounded-lg border border-slate-200 group-hover:border-blue-400 focus:outline-none transition-all cursor-pointer"
             />
-            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs">
+            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-400 bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-2xs group-hover:text-slate-600 group-hover:border-slate-300">
               ⌘ K
             </kbd>
           </div>
         </div>
+
+        {/* Mobile Search Button */}
+        <button
+          onClick={() => setIsSearchOpen(true)}
+          className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+          title="Search (⌘K)"
+          aria-label="Search"
+        >
+          <Search className="w-4 h-4" />
+        </button>
+
+
 
         {/* Right Status, Alerts & User Profile */}
         <div className="flex items-center gap-4 shrink-0">
@@ -161,8 +222,8 @@ export default function Header() {
           {isAuthenticated && user ? (
             <div className="relative">
               {(() => {
-                const opName = user.name || settings?.operatorName || "Krish Patel";
-                const opRole = user.role || settings?.operatorRole || "Operator";
+                const opName = user.name || roleConfig?.defaultUser || "Krish Patel";
+                const opRole = roleConfig?.name || user.role || "Operator";
                 const initials = opName
                   .split(" ")
                   .filter(Boolean)
@@ -182,7 +243,7 @@ export default function Header() {
                     </div>
                     <div className="hidden sm:block text-left leading-tight">
                       <div className="text-xs font-bold text-slate-900">{opName}</div>
-                      <div className="text-[10px] text-slate-400 font-mono truncate max-w-[110px]">{opRole}</div>
+                      <div className="text-[10px] text-slate-400 font-mono truncate max-w-[130px]">{opRole}</div>
                     </div>
                     <ChevronDown className="w-3 h-3 text-slate-400 -ml-1" />
                   </div>
@@ -196,29 +257,76 @@ export default function Header() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setProfileMenuOpen(false)} 
                   />
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1.5 animate-fade-in text-xs">
+                  <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2 space-y-1.5 animate-fade-in text-xs">
                     {/* User Header */}
                     <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
-                      <div className="font-bold text-slate-900">{user.name}</div>
-                      <div className="text-[10px] text-slate-500 font-mono truncate">{user.email}</div>
-                      <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-bold border border-emerald-200 mt-1">
+                      <div className="font-bold text-slate-900">{user.name || roleConfig?.defaultUser}</div>
+                      <div className="text-[10px] text-slate-500 font-mono truncate">{user.email || roleConfig?.defaultEmail}</div>
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border mt-1 ${roleConfig?.badgeVariant || "bg-blue-50 text-blue-700 border-blue-200"}`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        <span>{user.role}</span>
+                        <span>{roleConfig?.name || user.role}</span>
+                      </div>
+                      <div className="text-[9px] text-slate-400 mt-0.5 italic">
+                        {roleConfig?.primaryQuestion}
+                      </div>
+                    </div>
+
+                    {/* Quick Role Switcher Inside Profile */}
+                    <div className="p-2 bg-slate-50/70 rounded-xl border border-slate-100 space-y-1">
+                      <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 font-bold">SWITCH ROLE VIEW</span>
+                      <div className="grid grid-cols-2 gap-1 pt-0.5">
+                        <button
+                          onClick={() => { switchRole('chief_grid_dispatcher'); setProfileMenuOpen(false); }}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold text-left transition-colors cursor-pointer ${activeRoleId === 'chief_grid_dispatcher' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'}`}
+                        >
+                          Dispatcher
+                        </button>
+                        <button
+                          onClick={() => { switchRole('plant_operations_engineer'); setProfileMenuOpen(false); }}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold text-left transition-colors cursor-pointer ${activeRoleId === 'plant_operations_engineer' ? 'bg-amber-600 text-white' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'}`}
+                        >
+                          Plant Eng.
+                        </button>
+                        <button
+                          onClick={() => { switchRole('energy_trading_analyst'); setProfileMenuOpen(false); }}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold text-left transition-colors cursor-pointer ${activeRoleId === 'energy_trading_analyst' ? 'bg-emerald-600 text-white' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'}`}
+                        >
+                          Trading
+                        </button>
+                        <button
+                          onClick={() => { switchRole('remc_desk_officer'); setProfileMenuOpen(false); }}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-bold text-left transition-colors cursor-pointer ${activeRoleId === 'remc_desk_officer' ? 'bg-purple-600 text-white' : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'}`}
+                        >
+                          REMC Desk
+                        </button>
                       </div>
                     </div>
 
                     {/* Actions */}
                     <div className="space-y-0.5 pt-1">
-                      <button
-                        onClick={() => {
-                          setProfileMenuOpen(false);
-                          setIsDispatchModalOpen(true);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 font-medium cursor-pointer transition-colors text-left"
-                      >
-                        <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-                        <span>Quick Dispatch Directive</span>
-                      </button>
+                      {canControl() ? (
+                        <button
+                          onClick={() => {
+                            setProfileMenuOpen(false);
+                            setIsDispatchModalOpen(true);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 font-medium cursor-pointer transition-colors text-left"
+                        >
+                          <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                          <span>Quick Dispatch Directive</span>
+                        </button>
+                      ) : (
+                        <div 
+                          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-slate-400 bg-slate-50/50 text-[11px] font-medium text-left cursor-not-allowed"
+                          title="Operational dispatch restricted to Chief Grid Dispatcher"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <Zap className="w-4 h-4 text-slate-300 shrink-0" />
+                            <span>Quick Dispatch Directive</span>
+                          </div>
+                          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-200 text-slate-600">Restricted</span>
+                        </div>
+                      )}
 
                       <button
                         onClick={() => {
@@ -240,6 +348,17 @@ export default function Header() {
                       >
                         <User className="w-4 h-4 text-slate-400 shrink-0" />
                         <span>Settings & Profile</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          navigate("/");
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 font-medium cursor-pointer transition-colors text-left"
+                      >
+                        <Globe className="w-4 h-4 text-emerald-500 shrink-0" />
+                        <span>Product Landing Page</span>
                       </button>
                     </div>
 
@@ -322,21 +441,36 @@ export default function Header() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold text-slate-900 truncate max-w-[200px]" title={activeSolarPark}>
-                {activeSolarPark}
+              <h2 className="text-xs font-bold text-slate-900 truncate max-w-[200px]" title={activeRoleId === 'plant_operations_engineer' ? assignedPlant?.name : activeSolarPark}>
+                {activeRoleId === 'plant_operations_engineer' ? assignedPlant?.name : activeSolarPark}
               </h2>
               <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold border border-emerald-200">
-                Operational
+                {activeRoleId === 'plant_operations_engineer' ? 'Assigned' : 'Operational'}
               </span>
             </div>
             <p className="text-[10px] text-slate-500 font-mono">
-              Solar + Wind • {totalCapMw} MW
+              {activeRoleId === 'plant_operations_engineer' ? `${assignedPlant?.type} • ${assignedPlant?.capacityMw} MW` : `Solar + Wind • ${totalCapMw} MW`}
             </p>
           </div>
         </div>
 
         {/* Location Dropdowns */}
         <div className="flex flex-wrap items-center gap-2">
+          {activeRoleId === 'plant_operations_engineer' && (
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg text-xs shadow-2xs">
+              <Factory className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+              <span className="text-[11px] font-mono font-bold text-amber-900">Plant Scope:</span>
+              <select
+                value={assignedPlantId}
+                onChange={(e) => setAssignedPlantId(e.target.value)}
+                className="bg-transparent text-xs font-bold text-amber-950 font-sans focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="sanand-solar">Sanand Solar PV Cluster (250 MW)</option>
+                <option value="bhadla-solar">Bhadla Solar Park (300 MW)</option>
+              </select>
+            </div>
+          )}
+
           {/* State Dropdown */}
           <div className="flex items-center gap-1.5 bg-white border border-slate-200 hover:border-slate-300 px-2.5 py-1 rounded-lg text-xs transition-colors shadow-2xs">
             <span className="text-[11px] text-slate-400 font-mono">State:</span>
@@ -435,6 +569,12 @@ export default function Header() {
           <span className="text-[10px] text-slate-500">XGBoost v3.0 Active</span>
         </div>
       )}
+
+      {/* Global Interactive Search Modal */}
+      <GlobalSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
     </header>
   );
 }

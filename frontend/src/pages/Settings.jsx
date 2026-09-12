@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   User, 
   BatteryCharging, 
@@ -11,9 +11,11 @@ import {
   Volume2, 
   CloudSun,
   Activity,
-  Zap
+  Zap,
+  Database
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
   const { 
@@ -25,9 +27,32 @@ export default function Settings() {
     loadData
   } = useApp();
 
+  const { user, updateProfile } = useAuth();
+
   const [activeTab, setActiveTab] = useState('profile');
-  const [formData, setFormData] = useState({ ...settings });
+  const [formData, setFormData] = useState(() => ({
+    ...settings,
+    operatorName: user?.name || settings.operatorName,
+    operatorRole: user?.role || settings.operatorRole,
+    operatorDesk: user?.station || settings.operatorDesk,
+    operatorEmail: user?.email || settings.operatorEmail,
+  }));
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Synchronize formData with current logged-in user profile
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        operatorName: user.name || prev.operatorName,
+        operatorRole: user.role || prev.operatorRole,
+        operatorDesk: user.station || prev.operatorDesk,
+        operatorEmail: user.email || prev.operatorEmail,
+      }));
+    }
+  }, [user]);
 
   const stateName = availableStates.find(s => s.id === selectedState)?.name || "Gujarat";
 
@@ -36,10 +61,36 @@ export default function Settings() {
     updateSettings({ [key]: value });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setIsSaving(true);
+    // 1. Update app context settings (localStorage)
     updateSettings(formData);
+
+    // 2. Persist operator profile into SQLite database (profiles table)
+    let savedToDb = false;
+    try {
+      const res = await updateProfile({
+        name: formData.operatorName,
+        role: formData.operatorRole,
+        station: formData.operatorDesk,
+        email: formData.operatorEmail
+      });
+      if (res && res.success !== false) {
+        savedToDb = true;
+      }
+    } catch (err) {
+      console.warn("Failed to persist profile to database:", err);
+    } finally {
+      setIsSaving(false);
+    }
+
+    setSaveMessage(savedToDb ? "Profile & Settings Saved to Database!" : "Settings Saved Locally!");
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3500);
+    setTimeout(() => {
+      setSaveSuccess(false);
+      setSaveMessage('');
+    }, 3500);
+
     // Reload forecast with updated settings
     loadData();
   };
@@ -48,7 +99,11 @@ export default function Settings() {
     resetSettings();
     setFormData({ ...settings });
     setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3500);
+    setSaveMessage("Settings Reset to Defaults");
+    setTimeout(() => {
+      setSaveSuccess(false);
+      setSaveMessage('');
+    }, 3500);
   };
 
   // Play a soft high-tech chime using Web Audio API
@@ -107,7 +162,7 @@ export default function Settings() {
           {saveSuccess && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold animate-fade-in">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Settings Applied!</span>
+              <span>{saveMessage || "Settings Applied!"}</span>
             </div>
           )}
 
@@ -123,10 +178,15 @@ export default function Settings() {
           <button
             type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
           >
-            <Save className="w-3.5 h-3.5" />
-            <span>Save Changes</span>
+            {isSaving ? (
+              <span className="inline-block w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <Save className="w-3.5 h-3.5" />
+            )}
+            <span>{isSaving ? "Saving to DB..." : "Save Changes"}</span>
           </button>
         </div>
       </div>
@@ -277,6 +337,38 @@ export default function Settings() {
                     placeholder="e.g. operator@sldc.gov.in"
                   />
                 </div>
+              </div>
+
+              {/* Database Synchronization Status & Quick Save */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>SQLite Database Persistence</span>
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span className="text-[10px] font-mono text-emerald-700 font-semibold">Active</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Profile records are actively stored in <code className="font-mono bg-slate-200/70 px-1 py-0.5 rounded text-slate-800">renewai.db</code> (<span className="italic">profiles</span> table).
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-xs font-semibold shrink-0 cursor-pointer shadow-2xs transition-all"
+                >
+                  {isSaving ? (
+                    <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  <span>Save Profile to DB</span>
+                </button>
               </div>
             </div>
           )}

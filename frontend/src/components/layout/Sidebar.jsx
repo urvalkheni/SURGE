@@ -10,11 +10,17 @@ import {
   Sparkles, 
   CloudSun, 
   BarChart3, 
-  Settings
+  Settings,
+  Shield,
+  Radio,
+  Sliders,
+  TrendingDown,
+  X
 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
 
-export default function Sidebar() {
+export default function Sidebar({ isMobile = false, onClose }) {
   const { 
     activeAlertsCount, 
     availableStates, 
@@ -25,6 +31,8 @@ export default function Sidebar() {
     recommendations 
   } = useApp();
 
+  const { roleConfig, activeRoleId } = useAuth();
+
   const stateName = availableStates.find(s => s.id === selectedState)?.name || "Gujarat";
   const cityName = availableCities.find(c => c.id === selectedCity)?.name || "";
 
@@ -33,26 +41,42 @@ export default function Sidebar() {
   const activePoint = schedule.length > 0 ? (schedule.find(s => s.solar_generation_mw > 20) || schedule[0]) : null;
   const gridStatus = activePoint?.system_status; // "SURPLUS" | "DEFICIT" | "BALANCED"
 
+  const navLabels = roleConfig?.navLabels || {
+    dashboard: "Command Center",
+    forecast: "Forecast",
+    alerts: "Risk & Alerts",
+    plants: "Plants",
+    grid: "Grid & Demand",
+    battery: "Battery & Storage",
+    recommendations: "AI Advisory",
+    weather: "Weather",
+    accuracy: "Analytics",
+    settings: "Settings",
+  };
+
   const navItems = [
-    { to: "/dashboard", label: "Command Center", icon: LayoutDashboard },
-    { to: "/forecast", label: "Forecast", icon: TrendingUp },
+    { id: "dashboard", to: "/dashboard", label: navLabels.dashboard, icon: LayoutDashboard },
+    { id: "forecast", to: "/forecast", label: navLabels.forecast, icon: TrendingUp },
     { 
+      id: "alerts",
       to: "/alerts", 
-      label: "Risk & Alerts", 
+      label: navLabels.alerts, 
       icon: AlertTriangle, 
       badge: activeAlertsCount > 0 ? String(activeAlertsCount) : undefined,
       badgeStyle: "bg-rose-50 text-rose-600 border-rose-200"
     },
     { 
+      id: "plants",
       to: "/plants", 
-      label: "Plants", 
+      label: navLabels.plants, 
       icon: Factory,
       badge: forecastData?.total_capacity_mw ? `${forecastData.total_capacity_mw}MW` : undefined,
       badgeStyle: "bg-slate-100 text-slate-700 border-slate-200"
     },
     { 
-      to: "/forecast?tab=grid", 
-      label: "Grid & Demand", 
+      id: "grid",
+      to: "/grid", 
+      label: navLabels.grid, 
       icon: Zap,
       badge: gridStatus ? (gridStatus === "BALANCED" ? "Optimal" : gridStatus === "SURPLUS" ? "Surplus" : "Deficit") : undefined,
       badgeStyle: gridStatus === "SURPLUS" 
@@ -61,29 +85,67 @@ export default function Sidebar() {
         ? "bg-amber-50 text-amber-600 border-amber-200" 
         : "bg-blue-50 text-blue-600 border-blue-200"
     },
-    { to: "/recommendations?tab=bess", label: "Battery & Storage", icon: BatteryCharging },
+    { id: "battery", to: "/battery", label: navLabels.battery, icon: BatteryCharging },
     { 
+      id: "recommendations",
       to: "/recommendations", 
-      label: "AI Advisory", 
+      label: navLabels.recommendations, 
       icon: Sparkles,
       badge: recommendations?.length > 0 ? String(recommendations.length) : undefined,
       badgeStyle: "bg-purple-50 text-purple-600 border-purple-200"
     },
-    { to: "/weather", label: "Weather", icon: CloudSun },
-    { to: "/accuracy", label: "Analytics", icon: BarChart3 },
-    { to: "/settings", label: "Settings", icon: Settings },
+    { id: "weather", to: "/weather", label: navLabels.weather, icon: CloudSun },
+    { id: "accuracy", to: "/analytics", label: navLabels.accuracy, icon: BarChart3 },
+    { id: "settings", to: "/settings", label: navLabels.settings, icon: Settings },
   ];
 
+  // Only display modules that the current role is authorized to access (hide restricted modules)
+  const visibleNavItems = navItems.filter((item) => {
+    const access = roleConfig?.moduleAccess?.[item.id];
+    return access !== "HIDDEN";
+  });
+
   return (
-    <aside className="w-56 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 select-none h-full overflow-hidden">
+    <aside className={`${isMobile ? "w-full" : "w-56"} bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 select-none h-full overflow-hidden`}>
+      {/* Role Profile Badge in Sidebar Header */}
+      <div className="p-3 border-b border-slate-100 bg-slate-50/70">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500">
+              Active Role
+            </span>
+          </div>
+          {isMobile && (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg hover:bg-slate-200/70 text-slate-500 transition-colors cursor-pointer"
+              aria-label="Close sidebar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <div className="mt-1 flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-900 truncate" title={roleConfig?.name}>
+            {roleConfig?.name || "Chief Grid Dispatcher"}
+          </span>
+        </div>
+        <div className="mt-0.5 text-[10px] text-slate-500 truncate" title={roleConfig?.primaryQuestion}>
+          {roleConfig?.roleTag || "Operations Intelligence"}
+        </div>
+      </div>
+
+      {/* Nav items */}
       <div className="p-3 space-y-1 overflow-y-auto min-h-0 flex-1">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
-              key={item.label}
+              key={item.label + item.to}
               to={item.to}
               end={item.to === "/dashboard"}
+              onClick={() => { if (isMobile && onClose) onClose(); }}
               className={({ isActive }) => `
                 flex items-center justify-between px-3 py-2 rounded-xl text-xs font-sans font-medium transition-all
                 ${isActive 
@@ -92,12 +154,12 @@ export default function Sidebar() {
                 }
               `}
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </div>
               {item.badge && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${item.badgeStyle || "bg-rose-50 text-rose-600 border-rose-200"}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full border shrink-0 ${item.badgeStyle || "bg-rose-50 text-rose-600 border-rose-200"}`}>
                   {item.badge}
                 </span>
               )}
@@ -106,10 +168,9 @@ export default function Sidebar() {
         })}
       </div>
 
-      {/* Bottom Promo Card: "Powering a Greener [State]" */}
+      {/* Bottom Context Card */}
       <div className="p-3 shrink-0">
         <div className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-xs">
-          {/* Text and Leaf Icon */}
           <div className="flex items-end justify-between gap-1">
             <div className="space-y-0.5">
               <h4 className="text-xs font-bold text-slate-900 leading-snug">

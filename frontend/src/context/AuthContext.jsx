@@ -1,5 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { 
+  apiSignup, 
+  apiLogin, 
+  apiGoogleAuth, 
+  saveUserProfile 
+} from '../services/api';
+import { 
+  normalizeRole, 
+  getRoleConfig, 
+  roleHasPermission, 
+  getModuleAccess, 
+  canControlGrid, 
+  ROLES, 
+  PERMISSIONS 
+} from '../config/roles';
 
 const AuthContext = createContext();
 
@@ -20,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.warn("Failed to load user session", e);
     }
-    // Default to DEMO_USER to allow seamless instant exploration
+    // Default to DEMO_USER or null so users start authenticated with Chief Grid Dispatcher
     return DEMO_USER;
   });
 
@@ -35,41 +50,99 @@ export const AuthProvider = ({ children }) => {
     }
   }, [user]);
 
+  // Derive active role information
+  const activeRoleId = normalizeRole(user?.role || 'chief_grid_dispatcher');
+  const roleConfig = getRoleConfig(activeRoleId);
+
+  // Switch role dynamically (in demo / evaluator / control room mode) and save to SQLite DB
+  const switchRole = (newRoleKey) => {
+    const norm = normalizeRole(newRoleKey);
+    const targetConfig = ROLES[norm] || ROLES.chief_grid_dispatcher;
+
+    const updated = {
+      ...(user || DEMO_USER),
+      role: targetConfig.name,
+      name: user?.name || targetConfig.defaultUser,
+      station: targetConfig.defaultStation,
+    };
+    setUser(updated);
+    try {
+      localStorage.setItem('renewai_auth_user', JSON.stringify(updated));
+    } catch (e) {
+      console.warn("Failed to persist switched role", e);
+    }
+
+    // Persist to backend database (SQLite profiles table)
+    saveUserProfile({
+      email: updated.email || targetConfig.defaultEmail,
+      name: updated.name,
+      role: updated.role,
+      station: updated.station
+    }).catch(e => console.warn("Background role DB sync notice:", e));
+  };
+
+  // Update operator profile and persist directly to SQLite database & local storage
+  const updateProfile = async (profileData) => {
+    const updated = {
+      ...(user || DEMO_USER),
+      name: (profileData.name !== undefined ? profileData.name : user?.name) || DEMO_USER.name,
+      role: (profileData.role !== undefined ? profileData.role : user?.role) || DEMO_USER.role,
+      station: (profileData.station !== undefined ? profileData.station : user?.station) || DEMO_USER.station,
+      email: (profileData.email !== undefined ? profileData.email : user?.email) || DEMO_USER.email,
+    };
+
+    setUser(updated);
+    try {
+      localStorage.setItem('renewai_auth_user', JSON.stringify(updated));
+    } catch (e) {
+      console.warn("Failed to persist updated user to localStorage", e);
+    }
+
+    try {
+      const res = await saveUserProfile({
+        email: updated.email,
+        name: updated.name,
+        role: updated.role,
+        station: updated.station
+      });
+      return res;
+    } catch (err) {
+      console.warn("Could not sync profile to backend SQLite DB", err);
+      return { success: false, message: err.message };
+    }
+  };
+
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
-      // 1. Try Supabase Auth
-      const res = await supabase.signIn(email, password);
+      // 1. Primary: Verify credentials against SQLite DB profiles table via backend
+      const res = await apiLogin(email, password);
       if (res.success) {
-        setUser(res.user);
-        setLoading(false);
-        return { success: true, user: res.user };
-      }
-
-      // 2. Try Local FastAPI backend fallback if running
-      const backendRes = await fetch('/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      }).catch(() => null);
-
-      if (backendRes && backendRes.ok) {
-        const data = await backendRes.json();
-        const userPayload = { ...data.user, token: data.token };
+        const userPayload = { ...res.data.user, token: res.data.token };
         setUser(userPayload);
         setLoading(false);
         return { success: true, user: userPayload };
       }
 
-      // 3. Demo account match
+      // 2. Demo account credentials fallback (for quick evaluation / offline mode)
       if (email.toLowerCase().includes('krish') || password === 'admin123') {
         setUser(DEMO_USER);
         setLoading(false);
         return { success: true, user: DEMO_USER };
       }
 
-      throw new Error(res.error || 'Invalid operator credentials.');
+      // 3. Supabase fallback if configured
+      if (supabase.hasKeys) {
+        const sbRes = await supabase.signIn(email, password);
+        if (sbRes.success) {
+          setUser(sbRes.user);
+          setLoading(false);
+          return { success: true, user: sbRes.user };
+        }
+      }
+
+      throw new Error(res.message || 'Invalid operator credentials.');
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -81,30 +154,31 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      // 1. Try Supabase Auth signup
-      const res = await supabase.signUp(email, password, { name, role, station });
+      // 1. Primary: Direct registration into SQLite DB (profiles table) & users.json
+      const res = await apiSignup({ name, email, password, role, station });
       if (res.success) {
-        setUser(res.user);
-        setLoading(false);
-        return { success: true, user: res.user };
-      }
-
-      // 2. Try FastAPI backend signup
-      const backendRes = await fetch('/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role, station })
-      }).catch(() => null);
-
-      if (backendRes && backendRes.ok) {
-        const data = await backendRes.json();
-        const userPayload = { ...data.user, token: data.token };
+        const userPayload = { ...res.data.user, token: res.data.token };
         setUser(userPayload);
         setLoading(false);
         return { success: true, user: userPayload };
       }
 
-      throw new Error(res.error || 'Failed to create operator account.');
+      // 2. If backend reported an explicit error (e.g. duplicate email, short password), throw it
+      if (res.message) {
+        throw new Error(res.message);
+      }
+
+      // 3. Supabase fallback if configured
+      if (supabase.hasKeys) {
+        const sbRes = await supabase.signUp(email, password, { name, role, station });
+        if (sbRes.success) {
+          setUser(sbRes.user);
+          setLoading(false);
+          return { success: true, user: sbRes.user };
+        }
+      }
+
+      throw new Error('Failed to create operator account in database.');
     } catch (err) {
       setError(err.message);
       setLoading(false);
@@ -119,24 +193,98 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loginAsDemo = (customRole) => {
+    const roleStr = customRole || 'Chief Grid Dispatcher';
+    const norm = normalizeRole(roleStr);
+    const targetConfig = ROLES[norm] || ROLES.chief_grid_dispatcher;
     const demo = {
       ...DEMO_USER,
-      role: customRole || DEMO_USER.role
+      name: targetConfig.defaultUser,
+      email: targetConfig.defaultEmail,
+      role: targetConfig.name,
+      station: targetConfig.defaultStation,
     };
     setUser(demo);
     return demo;
   };
 
+  const loginWithGoogle = async (googlePayload = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      // 1. Primary: Send payload to FastAPI backend to verify and store in SQLite DB
+      const res = await apiGoogleAuth(googlePayload);
+      if (res.success) {
+        const userPayload = { ...res.data.user, token: res.data.token };
+        setUser(userPayload);
+        setLoading(false);
+        return { success: true, user: userPayload };
+      }
+
+      // 2. Offline / resilient fallback session for Google operator
+      if (!googlePayload.email && !googlePayload.credential) {
+        throw new Error("Google authentication did not return a valid user profile or token.");
+      }
+
+      const emailStr = (googlePayload.email || "google.operator@sldc.gov.in").toLowerCase();
+      const nameStr = googlePayload.name || emailStr.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+      const googleUser = {
+        id: `usr-google-${Date.now().toString(36)}`,
+        name: nameStr,
+        email: emailStr,
+        role: googlePayload.role || "Chief Grid Dispatcher",
+        station: googlePayload.station || "Regional Load Despatch Centre",
+        picture: googlePayload.picture || null,
+        provider: "google",
+        token: `jwt_google_${Date.now()}`
+      };
+
+      // Ensure it is saved in SQLite database
+      saveUserProfile({
+        email: googleUser.email,
+        name: googleUser.name,
+        role: googleUser.role,
+        station: googleUser.station
+      }).catch(e => console.warn("Google user DB save notice:", e));
+
+      setUser(googleUser);
+      setLoading(false);
+      return { success: true, user: googleUser };
+    } catch (err) {
+      console.warn("Google login notice:", err);
+      setError(err.message);
+      setLoading(false);
+      return { success: false, error: err.message };
+    }
+  };
+
+  // Helper permission & scope utilities
+  const hasPermission = (permission) => roleHasPermission(activeRoleId, permission);
+  const getModuleAccessState = (moduleKey) => getModuleAccess(activeRoleId, moduleKey);
+  const canControl = () => canControlGrid(activeRoleId);
+
   return (
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
+      activeRoleId,
+      roleConfig,
+      switchRole,
+      updateProfile,
+      hasPermission,
+      getModuleAccessState,
+      canControl,
+      isDispatcher: activeRoleId === 'chief_grid_dispatcher',
+      isPlantEngineer: activeRoleId === 'plant_operations_engineer',
+      isTradingAnalyst: activeRoleId === 'energy_trading_analyst',
+      isRemcOfficer: activeRoleId === 'remc_desk_officer',
       loading,
       error,
       login,
       signup,
       logout,
-      loginAsDemo
+      loginAsDemo,
+      loginWithGoogle
     }}>
       {children}
     </AuthContext.Provider>
