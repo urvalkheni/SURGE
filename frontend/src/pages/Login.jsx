@@ -25,8 +25,14 @@ export default function Login() {
   const location = useLocation();
   const { login, loginAsDemo, loginWithGoogle, loading, error: authError } = useAuth();
 
-  const [email, setEmail] = useState('krish.patel@sldc.gujarat.gov.in');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem('surge_last_login_email') || '';
+    } catch (e) {
+      return '';
+    }
+  });
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState('');
   const gsiInitializedRef = useRef(false);
@@ -438,7 +444,7 @@ export default function Login() {
                 className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs hover:shadow-md transition-all cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-                <span>Continue as Demo Operator (Krish Patel)</span>
+                <span>Explore Demo Control Room (SLDC Dispatcher)</span>
               </button>
             </div>
 

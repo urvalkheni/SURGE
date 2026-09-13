@@ -20,11 +20,11 @@ const AuthContext = createContext();
 
 export const DEMO_USER = {
   id: "usr-001",
-  name: "Krish Patel",
-  email: "krish.patel@sldc.gujarat.gov.in",
+  name: "Chief Grid Dispatcher",
+  email: "dispatcher@sldc.gujarat.gov.in",
   role: "Chief Grid Dispatcher",
   station: "Gujarat SLDC - Gotri, Vadodara",
-  token: "jwt_demo_krish_patel_session"
+  token: "jwt_demo_dispatcher_session"
 };
 
 export const AuthProvider = ({ children }) => {
@@ -35,8 +35,8 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.warn("Failed to load user session", e);
     }
-    // Default to DEMO_USER or null so users start authenticated with Chief Grid Dispatcher
-    return DEMO_USER;
+    // Start unauthenticated (null) by default for security and proper login flow
+    return null;
   });
 
   const [loading, setLoading] = useState(false);
@@ -121,13 +121,19 @@ export const AuthProvider = ({ children }) => {
       if (res.success) {
         const userPayload = { ...res.data.user, token: res.data.token };
         setUser(userPayload);
+        try {
+          localStorage.setItem('surge_last_login_email', email);
+        } catch (e) {}
         setLoading(false);
         return { success: true, user: userPayload };
       }
 
       // 2. Demo account credentials fallback (for quick evaluation / offline mode)
-      if (email.toLowerCase().includes('krish') || password === 'admin123') {
+      if (email.toLowerCase().includes('demo') || email.toLowerCase().includes('dispatcher') || password === 'admin123') {
         setUser(DEMO_USER);
+        try {
+          localStorage.setItem('surge_last_login_email', email);
+        } catch (e) {}
         setLoading(false);
         return { success: true, user: DEMO_USER };
       }
@@ -137,6 +143,9 @@ export const AuthProvider = ({ children }) => {
         const sbRes = await supabase.signIn(email, password);
         if (sbRes.success) {
           setUser(sbRes.user);
+          try {
+            localStorage.setItem('surge_last_login_email', email);
+          } catch (e) {}
           setLoading(false);
           return { success: true, user: sbRes.user };
         }
@@ -154,16 +163,19 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      // 1. Primary: Direct registration into SQLite DB (profiles table) & users.json
+      // 1. Primary: Direct registration into database / resilient local store
       const res = await apiSignup({ name, email, password, role, station });
       if (res.success) {
         const userPayload = { ...res.data.user, token: res.data.token };
         setUser(userPayload);
+        try {
+          localStorage.setItem('surge_last_login_email', email);
+        } catch (e) {}
         setLoading(false);
         return { success: true, user: userPayload };
       }
 
-      // 2. If backend reported an explicit error (e.g. duplicate email, short password), throw it
+      // 2. If backend reported an explicit business validation error, throw it
       if (res.message) {
         throw new Error(res.message);
       }
@@ -173,6 +185,9 @@ export const AuthProvider = ({ children }) => {
         const sbRes = await supabase.signUp(email, password, { name, role, station });
         if (sbRes.success) {
           setUser(sbRes.user);
+          try {
+            localStorage.setItem('surge_last_login_email', email);
+          } catch (e) {}
           setLoading(false);
           return { success: true, user: sbRes.user };
         }
@@ -187,9 +202,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.signOut();
+    try {
+      await supabase.signOut();
+    } catch (e) {}
     setUser(null);
-    localStorage.removeItem('renewai_auth_user');
+    try {
+      localStorage.removeItem('renewai_auth_user');
+      localStorage.removeItem('renewai_supabase_session');
+    } catch (e) {}
   };
 
   const loginAsDemo = (customRole) => {
@@ -197,13 +217,17 @@ export const AuthProvider = ({ children }) => {
     const norm = normalizeRole(roleStr);
     const targetConfig = ROLES[norm] || ROLES.chief_grid_dispatcher;
     const demo = {
-      ...DEMO_USER,
-      name: targetConfig.defaultUser,
-      email: targetConfig.defaultEmail,
+      id: `usr-demo-${norm}`,
+      name: targetConfig.defaultUser || "Chief Grid Dispatcher",
+      email: targetConfig.defaultEmail || "dispatcher@sldc.gujarat.gov.in",
       role: targetConfig.name,
-      station: targetConfig.defaultStation,
+      station: targetConfig.defaultStation || "Gujarat SLDC - Gotri, Vadodara",
+      token: `jwt_demo_${norm}_session`
     };
     setUser(demo);
+    try {
+      localStorage.setItem('renewai_auth_user', JSON.stringify(demo));
+    } catch (e) {}
     return demo;
   };
 

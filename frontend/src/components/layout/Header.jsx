@@ -222,7 +222,7 @@ export default function Header() {
           {isAuthenticated && user ? (
             <div className="relative">
               {(() => {
-                const opName = user.name || roleConfig?.defaultUser || "Krish Patel";
+                const opName = user.name || roleConfig?.defaultUser || "Grid Operator";
                 const opRole = roleConfig?.name || user.role || "Operator";
                 const initials = opName
                   .split(" ")
@@ -396,15 +396,6 @@ export default function Header() {
               </Link>
             </div>
           )}
-
-          {/* Settings / Theme Toggle Icon */}
-          <div 
-            onClick={() => navigate("/settings")}
-            title="Open System Settings"
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer transition-colors"
-          >
-            <Sun className="w-4 h-4 text-slate-600" />
-          </div>
         </div>
       </div>
 

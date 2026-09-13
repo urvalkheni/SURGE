@@ -125,14 +125,14 @@ export const supabase = {
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check for demo account shortcut
-    if (normalizedEmail.includes('krish') || password === 'admin123') {
+    if (normalizedEmail.includes('dispatcher') || normalizedEmail.includes('krish') || password === 'admin123') {
       const demoUser = {
         id: "usr-001",
-        name: "Krish Patel",
-        email: "krish.patel@sldc.gujarat.gov.in",
+        name: "Chief Grid Dispatcher",
+        email: "dispatcher@sldc.gujarat.gov.in",
         role: "Chief Grid Dispatcher",
         station: "Gujarat SLDC - Gotri, Vadodara",
-        token: "jwt_demo_krish_patel_session"
+        token: "jwt_demo_dispatcher_session"
       };
       setStoredSession({ access_token: demoUser.token }, demoUser);
       return { success: true, user: demoUser };
@@ -217,7 +217,7 @@ export const supabase = {
             action_type: actionData.action_type || actionData.type,
             magnitude_mw: actionData.magnitude_mw || actionData.mw,
             target_facility: actionData.target_facility || 'BESS Array 01',
-            operator_name: actionData.operator_name || 'Krish Patel',
+            operator_name: actionData.operator_name || 'Chief Grid Dispatcher',
             rationale: actionData.rationale || '',
             financial_savings_inr: actionData.financial_savings_inr || 0,
             co2_avoided_kg: actionData.co2_avoided_kg || 0

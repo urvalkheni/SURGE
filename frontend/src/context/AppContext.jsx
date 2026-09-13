@@ -4,10 +4,10 @@ import { generateDynamicAlerts, generateDynamicRecommendations } from '../utils/
 import { MULTI_PLANT_DATA } from '../config/roles';
 
 const DEFAULT_SETTINGS = {
-  operatorName: "Krish Patel",
+  operatorName: "",
   operatorRole: "Chief Grid Dispatcher",
   operatorDesk: "Gujarat SLDC - Gotri, Vadodara",
-  operatorEmail: "krish.patel@sldc.gujarat.gov.in",
+  operatorEmail: "dispatcher@sldc.gujarat.gov.in",
   solarCapacityMw: 100,
   windCapacityMw: 100,
   demandOffsetMw: 0,
