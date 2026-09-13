@@ -45,7 +45,7 @@ export default function DispatchActionModal({ isOpen, onClose, initialAction, on
           action_type: actionType,
           magnitude_mw: Number(magnitudeMw),
           target_facility: targetFacility,
-          operator_name: user?.name || 'Krish Patel',
+          operator_name: user?.name || 'Chief Dispatcher',
           rationale: rationale,
           financial_savings_inr: savings,
           co2_avoided_kg: co2
@@ -98,7 +98,7 @@ export default function DispatchActionModal({ isOpen, onClose, initialAction, on
                 Execute Dispatch Command
               </h3>
               <p className="text-[11px] text-slate-500 font-mono">
-                Operator: {user?.name || 'Krish Patel'} &bull; {user?.role || 'Chief Dispatcher'}
+                Operator: {user?.name || 'Chief Dispatcher'} &bull; {user?.role || 'Chief Dispatcher'}
               </p>
             </div>
           </div>

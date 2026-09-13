@@ -1,32 +1,109 @@
 // High-fidelity fallback data generated from real Bhadla Solar & Jaisalmer Wind models
+const generate72HourSchedule = () => {
+  const schedule = [];
+  const days = [
+    { date: "2026-09-12", solarFactor: 1.0, windFactor: 1.0, demandFactor: 1.0 },
+    { date: "2026-09-13", solarFactor: 0.94, windFactor: 1.15, demandFactor: 1.05 },
+    { date: "2026-09-14", solarFactor: 1.02, windFactor: 0.88, demandFactor: 1.02 }
+  ];
+
+  days.forEach((day, dayIdx) => {
+    for (let h = 0; h < 24; h++) {
+      const hourStr = h.toString().padStart(2, '0') + ":00";
+      const timestamp = `${day.date} ${hourStr}`;
+
+      // Solar profile: 0 outside 06:00 - 18:00, bell curve peaking at 12:30 ~ 85 MW
+      let solar = 0;
+      if (h >= 6 && h <= 18) {
+        const solarProgress = (h - 6) / 12; // 0 to 1
+        solar = Math.sin(solarProgress * Math.PI) * 88.0 * day.solarFactor;
+        if (h === 6) solar = 2.4;
+        if (h === 18) solar = 4.8;
+      }
+      solar = Number(Math.max(0, solar).toFixed(1));
+
+      // Wind profile: higher nocturnal wind (14 - 22 MW), lower midday wind (2 - 8 MW)
+      let wind = 0;
+      if (h >= 10 && h <= 16) {
+        wind = (3.5 + Math.sin(h * 0.5) * 2.5) * day.windFactor;
+      } else {
+        wind = (14.0 + Math.cos(h * 0.4 + dayIdx) * 5.0) * day.windFactor;
+      }
+      wind = Number(Math.max(0.5, wind).toFixed(1));
+
+      const totalRE = Number((solar + wind).toFixed(1));
+
+      // Demand profile: baseline 75 MW, morning peak 115 MW (09:00), afternoon 65 MW, evening peak 132 MW (20:00)
+      let demand = 80;
+      if (h >= 0 && h < 6) {
+        demand = 82 - h * 1.2;
+      } else if (h >= 6 && h <= 10) {
+        demand = 85 + (h - 6) * 11.5; // morning ramp
+      } else if (h > 10 && h <= 16) {
+        demand = 125 - (h - 10) * 10.0; // industrial daytime drop
+      } else if (h > 16 && h <= 21) {
+        demand = 75 + (h - 16) * 11.2; // evening residential peak
+      } else {
+        demand = 130 - (h - 21) * 11.0;
+      }
+      demand = Number((demand * day.demandFactor).toFixed(1));
+
+      const balance = Number((totalRE - demand).toFixed(1));
+      let status = "BALANCED";
+      let advisory = "Optimal Grid Balance (Within ±15 MW band)";
+
+      if (balance < -15.0) {
+        status = "DEFICIT";
+        advisory = `Discharge BESS Battery / Ramp Fast Peaker (${balance} MW)`;
+      } else if (balance > 15.0) {
+        status = "SURPLUS";
+        advisory = `Charge BESS Battery (+${balance} MW) / Export to Regional Grid`;
+      }
+
+      schedule.push({
+        timestamp,
+        solar_generation_mw: solar,
+        wind_generation_mw: wind,
+        total_renewable_mw: totalRE,
+        grid_demand_mw: demand,
+        grid_balance_mw: balance,
+        system_status: status,
+        dispatch_advisory: advisory
+      });
+    }
+  });
+
+  return schedule;
+};
+
+const full72hSchedule = generate72HourSchedule();
+
 export const MOCK_HYBRID_FORECAST = {
-  hybrid_plant: "Rajasthan Hybrid Renewable Park (Bhadla Solar + Jaisalmer Wind)",
+  hybrid_plant: "Gujarat Clean Grid Telemetry Hub (Kutch Solar + Wind Corridor)",
   total_capacity_mw: 200.0,
   data_source: "Cached System Simulation (Offline)",
-  forecast_horizon_hours: 24,
-  solar_energy_mwh: 612.4,
-  wind_energy_mwh: 245.8,
-  total_energy_mwh: 858.2,
-  peak_output_mw: 92.4,
-  hourly_schedule: [
-    { timestamp: "2026-09-12 00:00", solar_generation_mw: 0.0, wind_generation_mw: 15.8, total_renewable_mw: 15.8, grid_demand_mw: 85.0, grid_balance_mw: -69.2, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-69.2 MW)" },
-    { timestamp: "2026-09-12 02:00", solar_generation_mw: 0.0, wind_generation_mw: 14.1, total_renewable_mw: 14.1, grid_demand_mw: 85.0, grid_balance_mw: -70.9, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-70.9 MW)" },
-    { timestamp: "2026-09-12 04:00", solar_generation_mw: 0.0, wind_generation_mw: 12.5, total_renewable_mw: 12.5, grid_demand_mw: 85.0, grid_balance_mw: -72.5, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-72.5 MW)" },
-    { timestamp: "2026-09-12 06:00", solar_generation_mw: 1.2, wind_generation_mw: 8.3, total_renewable_mw: 9.5, grid_demand_mw: 85.0, grid_balance_mw: -75.5, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-75.5 MW)" },
-    { timestamp: "2026-09-12 08:00", solar_generation_mw: 28.1, wind_generation_mw: 3.2, total_renewable_mw: 31.3, grid_demand_mw: 114.0, grid_balance_mw: -82.7, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-82.7 MW)" },
-    { timestamp: "2026-09-12 10:00", solar_generation_mw: 68.9, wind_generation_mw: 1.5, total_renewable_mw: 70.4, grid_demand_mw: 128.6, grid_balance_mw: -58.2, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-58.2 MW)" },
-    { timestamp: "2026-09-12 11:00", solar_generation_mw: 78.5, wind_generation_mw: 0.8, total_renewable_mw: 79.3, grid_demand_mw: 116.1, grid_balance_mw: -36.8, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-36.8 MW)" },
-    { timestamp: "2026-09-12 12:00", solar_generation_mw: 85.2, wind_generation_mw: 0.4, total_renewable_mw: 85.6, grid_demand_mw: 65.0, grid_balance_mw: 20.6, system_status: "SURPLUS", dispatch_advisory: "Charge BESS Battery (+20.6 MW) / Export to Regional Grid" },
-    { timestamp: "2026-09-12 13:00", solar_generation_mw: 85.2, wind_generation_mw: 0.0, total_renewable_mw: 85.2, grid_demand_mw: 64.3, grid_balance_mw: 20.9, system_status: "SURPLUS", dispatch_advisory: "Charge BESS Battery (+20.9 MW) / Export to Regional Grid" },
-    { timestamp: "2026-09-12 14:00", solar_generation_mw: 81.3, wind_generation_mw: 0.0, total_renewable_mw: 81.3, grid_demand_mw: 62.3, grid_balance_mw: 19.0, system_status: "SURPLUS", dispatch_advisory: "Charge BESS Battery (+19.0 MW) / Export to Regional Grid" },
-    { timestamp: "2026-09-12 15:00", solar_generation_mw: 72.4, wind_generation_mw: 0.0, total_renewable_mw: 72.4, grid_demand_mw: 59.1, grid_balance_mw: 13.3, system_status: "BALANCED", dispatch_advisory: "Optimal Grid Balance (Within ±15 MW band)" },
-    { timestamp: "2026-09-12 16:00", solar_generation_mw: 54.5, wind_generation_mw: 0.0, total_renewable_mw: 54.5, grid_demand_mw: 55.0, grid_balance_mw: -0.5, system_status: "BALANCED", dispatch_advisory: "Optimal Grid Balance (Within ±15 MW band)" },
-    { timestamp: "2026-09-12 17:00", solar_generation_mw: 35.4, wind_generation_mw: 0.5, total_renewable_mw: 35.9, grid_demand_mw: 75.4, grid_balance_mw: -39.5, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-39.5 MW)" },
-    { timestamp: "2026-09-12 18:00", solar_generation_mw: 13.0, wind_generation_mw: 1.2, total_renewable_mw: 14.2, grid_demand_mw: 85.0, grid_balance_mw: -70.8, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-70.8 MW)" },
-    { timestamp: "2026-09-12 19:00", solar_generation_mw: 0.0, wind_generation_mw: 4.8, total_renewable_mw: 4.8, grid_demand_mw: 107.5, grid_balance_mw: -102.7, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-102.7 MW)" },
-    { timestamp: "2026-09-12 21:00", solar_generation_mw: 0.0, wind_generation_mw: 12.2, total_renewable_mw: 12.2, grid_demand_mw: 130.0, grid_balance_mw: -117.8, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-117.8 MW)" },
-    { timestamp: "2026-09-12 23:00", solar_generation_mw: 0.0, wind_generation_mw: 16.0, total_renewable_mw: 16.0, grid_demand_mw: 107.5, grid_balance_mw: -91.5, system_status: "DEFICIT", dispatch_advisory: "Discharge BESS Battery / Ramp Fast Peaker (-91.5 MW)" },
-  ]
+  forecast_horizon_hours: 72,
+  solar_energy_mwh: 1840.5,
+  wind_energy_mwh: 765.2,
+  total_energy_mwh: 2605.7,
+  peak_output_mw: 96.4,
+  hourly_schedule: full72hSchedule
+};
+
+export const getMockForecastByHorizon = (hours = 24) => {
+  const h = Number(hours) || 24;
+  const sliced = full72hSchedule.slice(0, h);
+  const totalSolar = sliced.reduce((acc, s) => acc + s.solar_generation_mw, 0);
+  const totalWind = sliced.reduce((acc, s) => acc + s.wind_generation_mw, 0);
+
+  return {
+    ...MOCK_HYBRID_FORECAST,
+    forecast_horizon_hours: h,
+    solar_energy_mwh: Number(totalSolar.toFixed(1)),
+    wind_energy_mwh: Number(totalWind.toFixed(1)),
+    total_energy_mwh: Number((totalSolar + totalWind).toFixed(1)),
+    hourly_schedule: sliced
+  };
 };
 
 export const MOCK_METRICS = {

@@ -273,7 +273,7 @@ export default function Settings() {
                 </div>
                 <div>
                   <div className="text-sm font-bold text-slate-900">
-                    {formData.operatorName || "Krish Patel"}
+                    {formData.operatorName || user?.name || "Grid Operator"}
                   </div>
                   <div className="text-xs text-slate-500 font-mono">
                     {formData.operatorRole || "Chief Grid Dispatcher"}
@@ -295,7 +295,7 @@ export default function Settings() {
                     value={formData.operatorName}
                     onChange={(e) => handleChange('operatorName', e.target.value)}
                     className="w-full px-3 py-2 text-xs text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                    placeholder="e.g. Krish Patel"
+                    placeholder="e.g. Rajesh Sharma"
                   />
                 </div>
 
